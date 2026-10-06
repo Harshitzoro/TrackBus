@@ -1,0 +1,22 @@
+{
+  "buses": {
+    "BUS-001": {
+      "name": "Campus Bus 1",
+      "route_id": "ROUTE-001",
+      "active": true
+    }
+  },
+  "routes": {
+    "ROUTE-001": {
+      "name": "Main Campus Route",
+      "stop_ids": ["STOP-001"]
+    }
+  },
+  "stops": {
+    "STOP-001": {
+      "name": "Main Gate",
+      "latitude": 12.9716,
+      "longitude": 77.5946
+    }
+  }
+}

@@ -1,0 +1,9 @@
+@media (max-width: 600px) {
+  body {
+    padding: 1rem;
+  }
+
+  #map {
+    min-height: 14rem;
+  }
+}

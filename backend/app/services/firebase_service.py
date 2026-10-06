@@ -1,0 +1,1 @@
+"""Persistence operations for Firebase will be implemented here."""
