@@ -1,0 +1,37 @@
+{
+    "folders": [
+        {
+            "name": "IoT - ESP8266",
+            "path": "iot/esp8266"
+        },
+        {
+            "name": "Backend",
+            "path": "backend"
+        },
+        {
+            "name": "Frontend",
+            "path": "frontend"
+        },
+        {
+            "name": "Firebase",
+            "path": "firebase"
+        },
+        {
+            "name": "Design",
+            "path": "design"
+        },
+        {
+            "name": "Testing",
+            "path": "testing"
+        },
+        {
+            "name": "Docs",
+            "path": "docs"
+        }
+    ],
+    "settings": {
+        "files.exclude": {
+            "**/.pio": true
+        }
+    }
+}
