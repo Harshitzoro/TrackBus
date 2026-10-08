@@ -1,7 +1,39 @@
-#pragma once
+#ifndef CONFIG_H
+#define CONFIG_H
 
-// Replace these placeholders locally; never commit device credentials.
-#define TRACKBUS_WIFI_SSID ""
-#define TRACKBUS_WIFI_PASSWORD ""
-#define TRACKBUS_API_URL "http://localhost:8000/api/v1/gps"
-#define TRACKBUS_BUS_ID "BUS-001"
+// =============================
+// Wi-Fi Configuration
+// =============================
+
+#define WIFI_SSID "redmi10 prime 5G"
+#define WIFI_PASSWORD "11223344"
+
+
+// =============================
+// GPS Configuration
+// =============================
+
+// GPS connected to:
+// NEO-6M TX -> ESP8266 D5
+// NEO-6M RX -> ESP8266 D6
+
+#define GPS_RX_PIN D5
+#define GPS_TX_PIN D6
+
+#define GPS_BAUD_RATE 9600
+
+
+// =============================
+// Serial Monitor
+// =============================
+
+#define SERIAL_BAUD_RATE 115200
+
+
+// =============================
+// Bus Information
+// =============================
+
+#define BUS_ID "BUS_001"
+
+#endif
