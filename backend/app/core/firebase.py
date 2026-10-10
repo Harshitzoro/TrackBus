@@ -1,6 +1,33 @@
-"""Firebase initialization boundary; credentials should come from environment configuration."""
+from pathlib import Path
+
+import firebase_admin
+from firebase_admin import credentials, db
+
+from app.core.config import settings
 
 
 def get_database():
-    """Return the configured Firebase database client when initialization is added."""
-    raise NotImplementedError("Firebase integration is not configured yet")
+    """Initialize Firebase once and return the root database reference."""
+    database_url = settings.firebase_database_url
+    credentials_path = settings.firebase_credentials_path
+
+    if not database_url:
+        raise RuntimeError("FIREBASE_DATABASE_URL is not configured")
+
+    if not credentials_path:
+        raise RuntimeError("FIREBASE_CREDENTIALS_PATH is not configured")
+
+    path = Path(credentials_path).expanduser()
+    if not path.is_file():
+        raise RuntimeError(f"Firebase credentials file not found: {path}")
+
+    try:
+        app = firebase_admin.get_app()
+    except ValueError:
+        credential = credentials.Certificate(str(path))
+        app = firebase_admin.initialize_app(
+            credential,
+            {"databaseURL": database_url},
+        )
+
+    return db.reference("/", app=app)
