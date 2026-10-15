@@ -2,16 +2,19 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFiMulti.h>
+#include <WiFiClientSecure.h>
 #include <TinyGPS++.h>
 #include <SoftwareSerial.h>
 #include <time.h>
 
 #include "config.h"
 #include "wifi_networks.h"
+
 ESP8266WiFiMulti wifiMulti;
 
-// FastAPI address: use your computer's current IPv4 address.
-const char* API_URL = "https://trackbus-api.onrender.com/api/v1/gps";
+// Hosted TrackBus FastAPI endpoint (HTTPS).
+const char* API_URL =
+    "https://trackbus-api.onrender.com/api/v1/gps";
 
 TinyGPSPlus gps;
 SoftwareSerial gpsSerial(GPS_RX_PIN, GPS_TX_PIN);
@@ -35,7 +38,8 @@ void setup() {
     if (WiFi.status() == WL_CONNECTED) {
         // Synchronize the device clock to UTC.
         configTime(0, 0, "pool.ntp.org", "time.nist.gov");
-        Serial.print("Synchronizing device time");
+
+        Serial.print("Synchronizing device time...");
 
         char timestamp[25];
         unsigned long start = millis();
@@ -51,7 +55,9 @@ void setup() {
         if (getTimestamp(timestamp, sizeof(timestamp))) {
             Serial.println("Clock synchronized.");
         } else {
-            Serial.println("Time sync pending; GPS updates will wait for valid time.");
+            Serial.println(
+                "Time sync pending; GPS updates will wait for valid time."
+            );
         }
     }
 
@@ -59,21 +65,25 @@ void setup() {
 }
 
 void loop() {
+    // Read incoming GPS data.
     while (gpsSerial.available()) {
         gps.encode(gpsSerial.read());
     }
 
+    // Process each newly updated GPS location.
     if (gps.location.isUpdated()) {
         printGPSData();
 
         if (gps.location.isValid() && gps.location.age() < 5000) {
             sendGPSUpdate();
         } else {
-            Serial.println("GPS fix invalid or stale; update skipped.");
+            Serial.println(
+                "GPS fix invalid or stale; update skipped."
+            );
         }
     }
 
-    // Allow Wi-Fi to recover if the connection drops.
+    // Attempt Wi-Fi recovery if disconnected.
     if (WiFi.status() != WL_CONNECTED) {
         Serial.println("Wi-Fi disconnected; reconnecting...");
         connectToWiFi();
@@ -83,6 +93,7 @@ void loop() {
 void connectToWiFi() {
     WiFi.mode(WIFI_STA);
 
+    // Register the configured Wi-Fi networks.
     for (int i = 0; i < WIFI_NETWORK_COUNT; i++) {
         wifiMulti.addAP(
             WIFI_NETWORKS[i].ssid,
@@ -99,6 +110,7 @@ void connectToWiFi() {
 
     Serial.println();
     Serial.println("Wi-Fi connected!");
+
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 }
@@ -140,7 +152,9 @@ void printGPSData() {
 
     Serial.print("Wi-Fi: ");
     Serial.println(
-        WiFi.status() == WL_CONNECTED ? "CONNECTED" : "DISCONNECTED"
+        WiFi.status() == WL_CONNECTED
+            ? "CONNECTED"
+            : "DISCONNECTED"
     );
 
     Serial.println("--------------------------------");
@@ -155,22 +169,31 @@ void sendGPSUpdate() {
     char timestamp[25];
 
     if (!getTimestamp(timestamp, sizeof(timestamp))) {
-        Serial.println("GPS update skipped: device time is not synchronized.");
+        Serial.println(
+            "GPS update skipped: device time is not synchronized."
+        );
         return;
     }
 
-    WiFiClient client;
+    // HTTPS client for the hosted Render endpoint.
+    WiFiClientSecure client;
+
+    // TEMPORARY CONNECTIVITY TEST ONLY:
+    // This disables TLS certificate verification.
+    // Replace with proper certificate verification before production.
+    client.setInsecure();
+
     HTTPClient http;
 
     if (!http.begin(client, API_URL)) {
-        Serial.println("Could not initialize HTTP request.");
+        Serial.println("Could not initialize HTTPS request.");
         return;
     }
 
-    http.setTimeout(5000);
+    http.setTimeout(15000);
     http.addHeader("Content-Type", "application/json");
 
-    // Coordinates are numeric JSON values; timestamp is UTC ISO 8601.
+    // Construct the GPS update JSON payload.
     String payload = "{\"bus_id\":\"";
     payload += BUS_ID;
     payload += "\",\"latitude\":";
@@ -190,17 +213,21 @@ void sendGPSUpdate() {
         Serial.print("HTTP status: ");
         Serial.println(statusCode);
 
-        Serial.print("API response: ");
-        Serial.println(http.getString());
+        String response = http.getString();
 
-        if (statusCode == 200) {
+        Serial.print("API response: ");
+        Serial.println(response);
+
+        if (statusCode >= 200 && statusCode < 300) {
             Serial.println("GPS update accepted by backend.");
         } else {
-            Serial.println("Backend did not accept the update.");
+            Serial.println("Backend returned an error response.");
         }
     } else {
-        Serial.print("HTTP request failed: ");
-        Serial.println(HTTPClient::errorToString(statusCode));
+        Serial.print("HTTPS request failed: ");
+        Serial.println(
+            HTTPClient::errorToString(statusCode)
+        );
     }
 
     http.end();
