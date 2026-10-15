@@ -3,6 +3,9 @@ from fastapi import APIRouter, HTTPException
 from app.schemas.gps import GPSUpdate
 from app.services.gps_service import accept_gps_update
 from app.services.firebase_service import save_gps_update
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/gps", tags=["gps"])
 
@@ -14,6 +17,7 @@ def receive_gps_update(update: GPSUpdate) -> dict:
     try:
         return save_gps_update(accepted_update)
     except Exception:
+        logger.exception("Failed to save GPS update to Firebase")
         raise HTTPException(
             status_code=503,
             detail="Unable to save GPS update",
