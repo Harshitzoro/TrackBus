@@ -18,20 +18,23 @@ def get_database():
         raise RuntimeError("FIREBASE_CREDENTIALS_PATH is not configured")
 
     path = Path(credentials_path).expanduser()
-
+    secret_dir = Path("/etc/secrets")
+    secret_path = secret_dir / "trackbus-255f1-firebase-adminsdk-fbsvc-5dc5f542b6.json"
     if not path.is_file():
-        secret_dir = Path("/etc/secrets")
-        visible_files = (
-            sorted(p.name for p in secret_dir.iterdir() if p.is_file())
-            if secret_dir.is_dir()
-            else []
-        )
-        raise RuntimeError(
-            "Firebase credentials file is missing. "
-            f"Configured path: {path}; "
-            f"parent directory exists: {path.parent.is_dir()}; "
-            f"secret filenames visible: {visible_files}"
-        )
+        details = {
+            "configured_path": str(path),
+            "exists": path.exists(),
+            "is_file": path.is_file(),
+            "is_dir": path.is_dir(),
+            "resolved_path": str(path.resolve()),
+            "secret_dir_exists": secret_dir.is_dir(),
+            "secret_entry_exists": secret_path.exists(),
+            "secret_entry_is_file": secret_path.is_file(),
+            "secret_entry_is_dir": secret_path.is_dir(),
+        }
+
+        raise RuntimeError(f"Firebase secret path diagnostic: {details}")
+
     
 
     try:
