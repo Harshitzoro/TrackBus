@@ -20,11 +20,19 @@ def get_database():
     path = Path(credentials_path).expanduser()
 
     if not path.is_file():
+        secret_dir = Path("/etc/secrets")
+        visible_files = (
+            sorted(p.name for p in secret_dir.iterdir() if p.is_file())
+            if secret_dir.is_dir()
+            else []
+        )
         raise RuntimeError(
             "Firebase credentials file is missing. "
             f"Configured path: {path}; "
-            f"parent directory exists: {path.parent.is_dir()}"
+            f"parent directory exists: {path.parent.is_dir()}; "
+            f"secret filenames visible: {visible_files}"
         )
+    
 
     try:
         app = firebase_admin.get_app()
