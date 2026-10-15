@@ -1,31 +1,28 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+#include <ESP8266WiFiMulti.h>
 #include <TinyGPS++.h>
 #include <SoftwareSerial.h>
+#include <time.h>
 
-#include "C:\Users\rajva\OneDrive\Desktop\TrackBus\TrackBus\iot\esp8266\include\config.h"
+#include "config.h"
+#include "wifi_networks.h"
+ESP8266WiFiMulti wifiMulti;
 
-// =====================================
-// GPS
-// =====================================
+// FastAPI address: use your computer's current IPv4 address.
+const char* API_URL = "https://trackbus-api.onrender.com/api/v1/gps";
 
 TinyGPSPlus gps;
+SoftwareSerial gpsSerial(GPS_RX_PIN, GPS_TX_PIN);
 
-SoftwareSerial gpsSerial(
-    GPS_RX_PIN,
-    GPS_TX_PIN
-);
 void connectToWiFi();
+bool getTimestamp(char* buffer, size_t bufferSize);
 void printGPSData();
-
-// =====================================
-// Setup
-// =====================================
+void sendGPSUpdate();
 
 void setup() {
-
     Serial.begin(SERIAL_BAUD_RATE);
-
     gpsSerial.begin(GPS_BAUD_RATE);
 
     Serial.println();
@@ -35,73 +32,97 @@ void setup() {
 
     connectToWiFi();
 
-    Serial.println();
+    if (WiFi.status() == WL_CONNECTED) {
+        // Synchronize the device clock to UTC.
+        configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+        Serial.print("Synchronizing device time");
+
+        char timestamp[25];
+        unsigned long start = millis();
+
+        while (!getTimestamp(timestamp, sizeof(timestamp))
+               && millis() - start < 15000) {
+            delay(500);
+            Serial.print(".");
+        }
+
+        Serial.println();
+
+        if (getTimestamp(timestamp, sizeof(timestamp))) {
+            Serial.println("Clock synchronized.");
+        } else {
+            Serial.println("Time sync pending; GPS updates will wait for valid time.");
+        }
+    }
+
     Serial.println("Waiting for GPS location...");
 }
 
-
-// =====================================
-// Main Loop
-// =====================================
-
 void loop() {
-
-    // Read GPS data
     while (gpsSerial.available()) {
-
-        gps.encode(
-            gpsSerial.read()
-        );
+        gps.encode(gpsSerial.read());
     }
 
-    // Check if location has changed
     if (gps.location.isUpdated()) {
-
         printGPSData();
+
+        if (gps.location.isValid() && gps.location.age() < 5000) {
+            sendGPSUpdate();
+        } else {
+            Serial.println("GPS fix invalid or stale; update skipped.");
+        }
+    }
+
+    // Allow Wi-Fi to recover if the connection drops.
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("Wi-Fi disconnected; reconnecting...");
+        connectToWiFi();
     }
 }
 
-
-// =====================================
-// Wi-Fi Connection
-// =====================================
-
 void connectToWiFi() {
+    WiFi.mode(WIFI_STA);
 
-    Serial.print("Connecting to Wi-Fi");
+    for (int i = 0; i < WIFI_NETWORK_COUNT; i++) {
+        wifiMulti.addAP(
+            WIFI_NETWORKS[i].ssid,
+            WIFI_NETWORKS[i].password
+        );
+    }
 
-    WiFi.begin(
-        WIFI_SSID,
-        WIFI_PASSWORD
-    );
+    Serial.println("Searching for saved Wi-Fi networks...");
 
-    while (
-        WiFi.status() != WL_CONNECTED
-    ) {
-
+    while (wifiMulti.run() != WL_CONNECTED) {
         delay(500);
-
         Serial.print(".");
     }
 
     Serial.println();
-
-    Serial.println("Wi-Fi Connected!");
-
-    Serial.print("ESP8266 IP Address: ");
-
-    Serial.println(
-        WiFi.localIP()
-    );
+    Serial.println("Wi-Fi connected!");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
 }
 
+bool getTimestamp(char* buffer, size_t bufferSize) {
+    time_t now = time(nullptr);
 
-// =====================================
-// GPS Data Output
-// =====================================
+    // Reject an unsynchronized clock.
+    if (now < 1700000000) {
+        return false;
+    }
+
+    struct tm timeInfo;
+    gmtime_r(&now, &timeInfo);
+
+    return strftime(
+        buffer,
+        bufferSize,
+        "%Y-%m-%dT%H:%M:%SZ",
+        &timeInfo
+    ) > 0;
+}
 
 void printGPSData() {
-
     Serial.println();
     Serial.println("--------- BUS LOCATION ---------");
 
@@ -109,36 +130,78 @@ void printGPSData() {
     Serial.println(BUS_ID);
 
     Serial.print("Latitude: ");
-    Serial.println(
-        gps.location.lat(),
-        6
-    );
+    Serial.println(gps.location.lat(), 6);
 
     Serial.print("Longitude: ");
-    Serial.println(
-        gps.location.lng(),
-        6
-    );
+    Serial.println(gps.location.lng(), 6);
 
     Serial.print("Satellites: ");
-    Serial.println(
-        gps.satellites.value()
-    );
+    Serial.println(gps.satellites.value());
 
     Serial.print("Wi-Fi: ");
+    Serial.println(
+        WiFi.status() == WL_CONNECTED ? "CONNECTED" : "DISCONNECTED"
+    );
 
-    if (
-        WiFi.status() == WL_CONNECTED
-    ) {
+    Serial.println("--------------------------------");
+}
 
-        Serial.println("CONNECTED");
-
-    } else {
-
-        Serial.println("DISCONNECTED");
+void sendGPSUpdate() {
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("GPS update skipped: Wi-Fi unavailable.");
+        return;
     }
 
-    Serial.println(
-        "--------------------------------"
-    );
+    char timestamp[25];
+
+    if (!getTimestamp(timestamp, sizeof(timestamp))) {
+        Serial.println("GPS update skipped: device time is not synchronized.");
+        return;
+    }
+
+    WiFiClient client;
+    HTTPClient http;
+
+    if (!http.begin(client, API_URL)) {
+        Serial.println("Could not initialize HTTP request.");
+        return;
+    }
+
+    http.setTimeout(5000);
+    http.addHeader("Content-Type", "application/json");
+
+    // Coordinates are numeric JSON values; timestamp is UTC ISO 8601.
+    String payload = "{\"bus_id\":\"";
+    payload += BUS_ID;
+    payload += "\",\"latitude\":";
+    payload += String(gps.location.lat(), 6);
+    payload += ",\"longitude\":";
+    payload += String(gps.location.lng(), 6);
+    payload += ",\"timestamp\":\"";
+    payload += timestamp;
+    payload += "\"}";
+
+    Serial.println("Sending GPS update to TrackBus...");
+    Serial.println(payload);
+
+    int statusCode = http.POST(payload);
+
+    if (statusCode > 0) {
+        Serial.print("HTTP status: ");
+        Serial.println(statusCode);
+
+        Serial.print("API response: ");
+        Serial.println(http.getString());
+
+        if (statusCode == 200) {
+            Serial.println("GPS update accepted by backend.");
+        } else {
+            Serial.println("Backend did not accept the update.");
+        }
+    } else {
+        Serial.print("HTTP request failed: ");
+        Serial.println(HTTPClient::errorToString(statusCode));
+    }
+
+    http.end();
 }

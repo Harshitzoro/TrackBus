@@ -5,6 +5,8 @@
 .env.*
 !.env.example
 backend/.env.example
+iot/esp8266/include/config.h
+iot/esp8266/include/wifi_networks.h
 
 # Firebase credentials / private keys
 serviceAccountKey.json
@@ -66,3 +68,6 @@ logs/
 *.tmp
 *.temp
 *.swp
+# Local IoT configuration
+iot/esp8266/include/config.h
+iot/esp8266/include/wifi_networks.h

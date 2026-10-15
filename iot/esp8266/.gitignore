@@ -3,3 +3,11 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+# Local environment secrets
+.env
+.env.*
+!.env.example
+
+# Local IoT configuration
+iot/esp8266/include/config.h
+iot/esp8266/include/wifi_networks.h
