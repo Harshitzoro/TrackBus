@@ -18,8 +18,13 @@ def get_database():
         raise RuntimeError("FIREBASE_CREDENTIALS_PATH is not configured")
 
     path = Path(credentials_path).expanduser()
+
     if not path.is_file():
-        raise RuntimeError(f"Firebase credentials file not found: {path}")
+        raise RuntimeError(
+            "Firebase credentials file is missing. "
+            f"Configured path: {path}; "
+            f"parent directory exists: {path.parent.is_dir()}"
+        )
 
     try:
         app = firebase_admin.get_app()
