@@ -147,6 +147,15 @@ void printGPSData() {
     Serial.print("Longitude: ");
     Serial.println(gps.location.lng(), 6);
 
+    Serial.print("GPS Speed: ");
+
+    if (gps.speed.isValid() && gps.speed.age() < 5000) {
+        Serial.print(gps.speed.kmph(), 2);
+        Serial.println(" km/h");
+    } else {
+        Serial.println("Unavailable");
+    }
+
     Serial.print("Satellites: ");
     Serial.println(gps.satellites.value());
 
@@ -202,7 +211,15 @@ void sendGPSUpdate() {
     payload += String(gps.location.lng(), 6);
     payload += ",\"timestamp\":\"";
     payload += timestamp;
-    payload += "\"}";
+    payload += "\"";
+
+    // Include speed only when the reading is valid and fresh.
+    if (gps.speed.isValid() && gps.speed.age() < 5000) {
+        payload += ",\"speed_kmph\":";
+        payload += String(gps.speed.kmph(), 2);
+    }
+
+    payload += "}";
 
     Serial.println("Sending GPS update to TrackBus...");
     Serial.println(payload);
