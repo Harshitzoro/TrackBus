@@ -1,5 +1,7 @@
+
 from app.core.firebase import get_database
 from app.schemas.gps import GPSUpdate
+
 
 def save_gps_update(update: GPSUpdate) -> dict:
     """Persist the latest GPS update for a bus."""
@@ -10,6 +12,9 @@ def save_gps_update(update: GPSUpdate) -> dict:
         "longitude": update.longitude,
         "timestamp": update.timestamp.isoformat(),
     }
+
+    if update.speed_kmph is not None:
+        location_data["speed_kmph"] = update.speed_kmph
 
     database.child("buses").child(update.bus_id).child(
         "location"
