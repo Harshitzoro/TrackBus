@@ -1,7 +1,10 @@
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
-from app.services.route_config import STOP_COORDINATES
+from app.services import deviation_service
+from app.services.route_config import ROUTE_START, ROUTE_STOPS
 from app.services.route_service import (
     distance_to_route_m,
     distance_to_stop_m,
@@ -9,59 +12,7 @@ from app.services.route_service import (
 )
 
 
-def test_distance_between_identical_coordinates_is_zero():
-    from app.utils.distance import haversine_meters
-
-    assert haversine_meters(12.9, 77.5, 12.9, 77.5) == 0
-
-
-def test_stop_a_is_at_start_of_route():
-    latitude, longitude = STOP_COORDINATES["STOP_A"]
-
-    assert distance_to_route_m(latitude, longitude) == pytest.approx(0)
-    assert route_progress_fraction(latitude, longitude) == pytest.approx(0)
-    assert distance_to_stop_m(latitude, longitude, "STOP_A") == pytest.approx(0)
-
-
-def test_stop_b_is_at_end_of_route():
-    latitude, longitude = STOP_COORDINATES["STOP_B"]
-
-    assert distance_to_route_m(latitude, longitude) == pytest.approx(0)
-    assert route_progress_fraction(latitude, longitude) == pytest.approx(1)
-    assert distance_to_stop_m(latitude, longitude, "STOP_B") == pytest.approx(0)
-
-
-def test_point_near_middle_has_middle_progress():
-    lat_a, lon_a = STOP_COORDINATES["STOP_A"]
-    lat_b, lon_b = STOP_COORDINATES["STOP_B"]
-
-    latitude = (lat_a + lat_b) / 2
-    longitude = (lon_a + lon_b) / 2
-
-    assert route_progress_fraction(latitude, longitude) == pytest.approx(0.5)
-
-
-def test_point_far_from_route_has_large_cross_track_distance():
-    lat_a, lon_a = STOP_COORDINATES["STOP_A"]
-    latitude = lat_a + 0.002
-    longitude = lon_a
-
-    assert distance_to_route_m(latitude, longitude) > 100
-
-
-def test_unknown_stop_is_rejected():
-    with pytest.raises(ValueError, match="Unknown stop"):
-        distance_to_stop_m(25.138, 75.827, "STOP_UNKNOWN")
-
-from datetime import datetime, timedelta, timezone
-
-from app.services import deviation_service
-
-
-def _fresh_location(
-    latitude: float,
-    longitude: float,
-) -> dict:
+def _fresh_location(latitude: float, longitude: float) -> dict:
     return {
         "latitude": latitude,
         "longitude": longitude,
@@ -84,28 +35,72 @@ def _patch_firebase_location(monkeypatch, location) -> None:
     )
 
 
-def test_deviation_reports_on_route_for_stop_a(monkeypatch):
-    from app.services.route_config import STOP_COORDINATES
+def test_distance_between_identical_coordinates_is_zero():
+    from app.utils.distance import haversine_meters
 
-    latitude, longitude = STOP_COORDINATES["STOP_A"]
+    assert haversine_meters(12.9, 77.5, 12.9, 77.5) == 0
+
+
+def test_route_start_is_at_start_of_route():
+    latitude = ROUTE_START["latitude"]
+    longitude = ROUTE_START["longitude"]
+
+    assert distance_to_route_m(latitude, longitude) == pytest.approx(0)
+    assert route_progress_fraction(latitude, longitude) == pytest.approx(0)
+
+
+def test_final_stop_is_at_end_of_route():
+    final_stop = ROUTE_STOPS[-1]
+    latitude = final_stop["latitude"]
+    longitude = final_stop["longitude"]
+
+    assert distance_to_route_m(latitude, longitude) == pytest.approx(0)
+    assert route_progress_fraction(latitude, longitude) == pytest.approx(1)
+    assert distance_to_stop_m(
+        latitude, longitude, final_stop["stop_id"]
+    ) == pytest.approx(0)
+
+
+def test_all_configured_stops_have_unique_ids():
+    ids = [stop["stop_id"] for stop in ROUTE_STOPS]
+    assert len(ids) == 16
+    assert len(ids) == len(set(ids))
+
+
+def test_point_far_from_route_has_large_cross_track_distance():
+    latitude = ROUTE_START["latitude"] + 0.01
+    longitude = ROUTE_START["longitude"]
+
+    assert distance_to_route_m(latitude, longitude) > 100
+
+
+def test_unknown_stop_is_rejected():
+    with pytest.raises(ValueError, match="Unknown stop"):
+        distance_to_stop_m(25.138, 75.827, "STOP_UNKNOWN")
+
+
+def test_deviation_reports_on_route_at_start(monkeypatch):
     _patch_firebase_location(
         monkeypatch,
-        _fresh_location(latitude, longitude),
+        _fresh_location(
+            ROUTE_START["latitude"],
+            ROUTE_START["longitude"],
+        ),
     )
 
     result = deviation_service.check_route_deviation("BUS_001")
 
     assert result["status"] == "on_route"
-    assert result["distance_from_route_m"] == 0
+    assert result["distance_from_route_m"] == pytest.approx(0)
 
 
 def test_deviation_reports_deviated_for_far_position(monkeypatch):
-    from app.services.route_config import STOP_COORDINATES
-
-    latitude, longitude = STOP_COORDINATES["STOP_A"]
     _patch_firebase_location(
         monkeypatch,
-        _fresh_location(latitude + 0.002, longitude),
+        _fresh_location(
+            ROUTE_START["latitude"] + 0.01,
+            ROUTE_START["longitude"],
+        ),
     )
 
     result = deviation_service.check_route_deviation("BUS_001")
@@ -124,14 +119,13 @@ def test_deviation_unavailable_when_location_missing(monkeypatch):
 
 
 def test_deviation_unavailable_when_location_is_stale(monkeypatch):
-    from app.services.route_config import STOP_COORDINATES
-
-    latitude, longitude = STOP_COORDINATES["STOP_A"]
-    location = _fresh_location(latitude, longitude)
+    location = _fresh_location(
+        ROUTE_START["latitude"],
+        ROUTE_START["longitude"],
+    )
     location["timestamp"] = (
         datetime.now(timezone.utc) - timedelta(minutes=10)
     ).isoformat()
-
     _patch_firebase_location(monkeypatch, location)
 
     result = deviation_service.check_route_deviation("BUS_001")
@@ -143,12 +137,13 @@ def test_deviation_unavailable_when_location_is_stale(monkeypatch):
 def test_deviation_api_returns_status(monkeypatch):
     from fastapi.testclient import TestClient
     from app.main import app
-    from app.services.route_config import STOP_COORDINATES
 
-    latitude, longitude = STOP_COORDINATES["STOP_A"]
     _patch_firebase_location(
         monkeypatch,
-        _fresh_location(latitude, longitude),
+        _fresh_location(
+            ROUTE_START["latitude"],
+            ROUTE_START["longitude"],
+        ),
     )
 
     client = TestClient(app)

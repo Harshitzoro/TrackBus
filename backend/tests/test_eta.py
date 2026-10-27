@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.schemas.eta import ETAResponse
 from app.services import eta_service
-from app.services.route_config import STOP_COORDINATES
+from app.services.route_config import ROUTE_START, ROUTE_STOPS
 
 client = TestClient(app)
 
@@ -15,14 +15,16 @@ client = TestClient(app)
 def fresh_location(
     latitude: float,
     longitude: float,
-    speed_kmph: float = 18.0,
-) -> dict[str, object]:
-    return {
+    speed_kmph: float | None = 18.0,
+) -> dict:
+    location = {
         "latitude": latitude,
         "longitude": longitude,
-        "speed_kmph": speed_kmph,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+    if speed_kmph is not None:
+        location["speed_kmph"] = speed_kmph
+    return location
 
 
 def patch_location(monkeypatch, location) -> None:
@@ -34,56 +36,48 @@ def patch_location(monkeypatch, location) -> None:
             return location
 
     monkeypatch.setattr(
-        eta_service,
-        "get_database",
-        lambda: FakeReference(),
+        eta_service, "get_database", lambda: FakeReference()
     )
 
 
 def test_eta_can_represent_unavailable_estimate():
     result = ETAResponse(
         bus_id="BUS_001",
-        stop_id="STOP_A",
+        stop_id="STOP_01",
         status="unavailable",
     )
-
     assert result.eta_seconds is None
     assert result.distance_m is None
 
 
-def test_real_stop_coordinates_are_configured():
-    assert STOP_COORDINATES["STOP_A"] == (
-        25.1386742,
-        75.8260137,
-    )
-    assert STOP_COORDINATES["STOP_B"] == (
-        25.1421876,
-        75.8284360,
-    )
+def test_complete_route_has_sixteen_unique_stops():
+    assert ROUTE_START["stop_id"] == "CP_TOWER"
+    assert len(ROUTE_STOPS) == 16
+    assert ROUTE_STOPS[0]["stop_id"] == "STOP_01"
+    assert ROUTE_STOPS[-1]["stop_id"] == "STOP_16"
+    ids = [stop["stop_id"] for stop in ROUTE_STOPS]
+    assert len(ids) == len(set(ids))
 
 
 def test_eta_returns_unavailable_without_bus_location(monkeypatch):
     patch_location(monkeypatch, None)
 
-    result = eta_service.estimate_arrival("BUS_001", "STOP_A")
+    result = eta_service.estimate_arrival("BUS_001", "STOP_01")
 
     assert result.status == "unavailable"
     assert result.eta_seconds is None
 
 
 def test_eta_calculates_for_fresh_bus_location(monkeypatch):
-    latitude, longitude = STOP_COORDINATES["STOP_A"]
-    # Place the simulated bus near the middle of the straight route.
-    lat_b, lon_b = STOP_COORDINATES["STOP_B"]
-    latitude = (latitude + lat_b) / 2
-    longitude = (longitude + lon_b) / 2
-
     patch_location(
         monkeypatch,
-        fresh_location(latitude, longitude),
+        fresh_location(
+            ROUTE_START["latitude"],
+            ROUTE_START["longitude"],
+        ),
     )
 
-    result = eta_service.estimate_arrival("BUS_001", "STOP_B")
+    result = eta_service.estimate_arrival("BUS_001", "STOP_01")
 
     assert result.status == "available"
     assert result.distance_m is not None
@@ -92,38 +86,36 @@ def test_eta_calculates_for_fresh_bus_location(monkeypatch):
     assert result.eta_seconds > 0
 
 
-def test_eta_unavailable_when_speed_is_zero(monkeypatch):
-    latitude, longitude = STOP_COORDINATES["STOP_A"]
+@pytest.mark.parametrize("speed", [0.0, None])
+def test_eta_unavailable_when_speed_is_zero_or_missing(
+    monkeypatch, speed
+):
     patch_location(
         monkeypatch,
-        fresh_location(latitude, longitude, speed_kmph=0),
+        fresh_location(
+            ROUTE_START["latitude"],
+            ROUTE_START["longitude"],
+            speed,
+        ),
     )
 
-    result = eta_service.estimate_arrival("BUS_001", "STOP_A")
+    result = eta_service.estimate_arrival("BUS_001", "STOP_01")
 
     assert result.status == "unavailable"
-
-
-def test_eta_unavailable_when_speed_is_missing(monkeypatch):
-    latitude, longitude = STOP_COORDINATES["STOP_A"]
-    location = fresh_location(latitude, longitude)
-    location.pop("speed_kmph")
-    patch_location(monkeypatch, location)
-
-    result = eta_service.estimate_arrival("BUS_001", "STOP_A")
-
-    assert result.status == "unavailable"
+    assert result.eta_seconds is None
 
 
 def test_eta_unavailable_when_location_is_stale(monkeypatch):
-    latitude, longitude = STOP_COORDINATES["STOP_A"]
-    location = fresh_location(latitude, longitude)
+    location = fresh_location(
+        ROUTE_START["latitude"],
+        ROUTE_START["longitude"],
+    )
     location["timestamp"] = (
         datetime.now(timezone.utc) - timedelta(minutes=10)
     ).isoformat()
     patch_location(monkeypatch, location)
 
-    result = eta_service.estimate_arrival("BUS_001", "STOP_A")
+    result = eta_service.estimate_arrival("BUS_001", "STOP_01")
 
     assert result.status == "unavailable"
 
@@ -134,57 +126,54 @@ def test_eta_rejects_unknown_stop():
 
 
 def test_eta_endpoint_returns_estimate(monkeypatch):
-    lat_a, lon_a = STOP_COORDINATES["STOP_A"]
-    lat_b, lon_b = STOP_COORDINATES["STOP_B"]
-
     patch_location(
         monkeypatch,
         fresh_location(
-            (lat_a + lat_b) / 2,
-            (lon_a + lon_b) / 2,
+            ROUTE_START["latitude"],
+            ROUTE_START["longitude"],
         ),
     )
 
-    response = client.get("/api/v1/eta/BUS_001/STOP_B")
+    response = client.get("/api/v1/eta/BUS_001/STOP_01")
 
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "available"
     assert data["eta_seconds"] is not None
     assert data["distance_m"] > 0
-def test_eta_to_stop_a_unavailable_after_bus_has_progressed(monkeypatch):
-    lat_a, lon_a = STOP_COORDINATES["STOP_A"]
-    lat_b, lon_b = STOP_COORDINATES["STOP_B"]
-
-    # Simulate a bus 25% of the way from STOP_A to STOP_B.
-    latitude = lat_a + 0.25 * (lat_b - lat_a)
-    longitude = lon_a + 0.25 * (lon_b - lon_a)
-
-    patch_location(
-        monkeypatch,
-        fresh_location(latitude, longitude),
-    )
-
-    result = eta_service.estimate_arrival("BUS_001", "STOP_A")
-
-    assert result.status == "unavailable"
-    assert result.eta_seconds is None
 
 
-def test_eta_to_stop_b_available_mid_route(monkeypatch):
-    lat_a, lon_a = STOP_COORDINATES["STOP_A"]
-    lat_b, lon_b = STOP_COORDINATES["STOP_B"]
-
+def test_eta_to_first_stop_unavailable_when_bus_has_passed_it(
+    monkeypatch,
+):
+    last_stop = ROUTE_STOPS[-1]
     patch_location(
         monkeypatch,
         fresh_location(
-            (lat_a + lat_b) / 2,
-            (lon_a + lon_b) / 2,
+            last_stop["latitude"],
+            last_stop["longitude"],
         ),
     )
 
-    result = eta_service.estimate_arrival("BUS_001", "STOP_B")
+    result = eta_service.estimate_arrival("BUS_001", "STOP_01")
 
-    assert result.status == "available"
-    assert result.eta_seconds is not None
-    assert result.eta_seconds > 0
+    assert result.status == "unavailable"
+
+
+def test_route_eta_endpoint_returns_route_response(monkeypatch):
+    patch_location(
+        monkeypatch,
+        fresh_location(
+            ROUTE_START["latitude"],
+            ROUTE_START["longitude"],
+        ),
+    )
+
+    response = client.get("/api/v1/eta/BUS_001")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["bus_id"] == "BUS_001"
+    assert data["status"] == "available"
+    assert data["next_stop_id"] == "STOP_01"
+    assert isinstance(data["upcoming_stops"], list)

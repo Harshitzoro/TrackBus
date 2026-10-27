@@ -1,48 +1,111 @@
 
-"""Geometry helpers for the TrackBus prototype route."""
+"""Route geometry and progress helpers for TrackBus."""
 
 import math
 
-from app.services.route_config import STOP_COORDINATES
+from app.services.route_config import ROUTE_START, ROUTE_STOPS
 from app.utils.distance import haversine_meters
 
 
-def distance_to_route_m(latitude: float, longitude: float) -> float:
-    """Estimate distance to the straight segment between STOP_A and STOP_B.
-
-    This uses a local planar projection, suitable for this short prototype
-    route. It does not represent the actual road geometry.
-    """
-    (lat_a, lon_a) = STOP_COORDINATES["STOP_A"]
-    (lat_b, lon_b) = STOP_COORDINATES["STOP_B"]
-
-    reference_lat = math.radians((lat_a + lat_b) / 2)
-    meters_per_degree_lat = 111_320.0
-    meters_per_degree_lon = (
-        111_320.0 * math.cos(reference_lat)
+def _route_points():
+    """Return the configured start and ordered stops as coordinate pairs."""
+    points = [
+        (ROUTE_START["latitude"], ROUTE_START["longitude"]),
+    ]
+    points.extend(
+        (stop["latitude"], stop["longitude"])
+        for stop in ROUTE_STOPS
     )
+    return points
 
-    ax = lon_a * meters_per_degree_lon
-    ay = lat_a * meters_per_degree_lat
-    bx = lon_b * meters_per_degree_lon
-    by = lat_b * meters_per_degree_lat
-    px = longitude * meters_per_degree_lon
-    py = latitude * meters_per_degree_lat
 
-    abx = bx - ax
-    aby = by - ay
-    length_squared = abx * abx + aby * aby
+def _segment_lengths(points):
+    """Calculate straight-line distances between consecutive route points."""
+    return [
+        haversine_meters(lat1, lon1, lat2, lon2)
+        for (lat1, lon1), (lat2, lon2)
+        in zip(points, points[1:])
+    ]
+
+
+def route_cumulative_distances_m():
+    """Distance from the route start to each configured stop."""
+    points = _route_points()
+    cumulative = [0.0]
+
+    for length in _segment_lengths(points):
+        cumulative.append(cumulative[-1] + length)
+
+    return cumulative
+
+
+def total_route_distance_m() -> float:
+    """Return the configured route's approximate total distance."""
+    return route_cumulative_distances_m()[-1]
+
+
+def _project_to_segment(latitude, longitude, start, end):
+    """Project a point onto one short segment in a local metre-based plane."""
+    lat1, lon1 = start
+    lat2, lon2 = end
+    reference_lat = math.radians((lat1 + lat2) / 2)
+    scale_x = 111_320.0 * math.cos(reference_lat)
+    scale_y = 111_320.0
+
+    ax, ay = lon1 * scale_x, lat1 * scale_y
+    bx, by = lon2 * scale_x, lat2 * scale_y
+    px, py = longitude * scale_x, latitude * scale_y
+
+    dx, dy = bx - ax, by - ay
+    length_squared = dx * dx + dy * dy
 
     if length_squared == 0:
-        return haversine_meters(latitude, longitude, lat_a, lon_a)
+        return 0.0, haversine_meters(
+            latitude, longitude, lat1, lon1
+        )
 
-    projection = ((px - ax) * abx + (py - ay) * aby) / length_squared
-    projection = max(0.0, min(1.0, projection))
+    fraction = ((px - ax) * dx + (py - ay) * dy) / length_squared
+    fraction = max(0.0, min(1.0, fraction))
 
-    closest_x = ax + projection * abx
-    closest_y = ay + projection * aby
+    nearest_x = ax + fraction * dx
+    nearest_y = ay + fraction * dy
 
-    return math.hypot(px - closest_x, py - closest_y)
+    distance = math.hypot(px - nearest_x, py - nearest_y)
+    return fraction, distance
+
+
+def route_position(latitude: float, longitude: float) -> dict:
+    """Find the nearest route segment and estimate progress along the route."""
+    points = _route_points()
+    lengths = _segment_lengths(points)
+    cumulative = route_cumulative_distances_m()
+
+    best = None
+
+    for index, (start, end) in enumerate(zip(points, points[1:])):
+        fraction, cross_track_m = _project_to_segment(
+            latitude, longitude, start, end
+        )
+        along_m = cumulative[index] + fraction * lengths[index]
+
+        if best is None or cross_track_m < best["cross_track_m"]:
+            best = {
+                "segment_index": index,
+                "segment_fraction": fraction,
+                "along_route_m": along_m,
+                "cross_track_m": cross_track_m,
+                "total_route_m": cumulative[-1],
+            }
+
+    if best is None:
+        raise ValueError("Route has no segments")
+
+    return best
+
+
+def distance_to_route_m(latitude: float, longitude: float) -> float:
+    """Return distance from a GPS point to the nearest configured segment."""
+    return route_position(latitude, longitude)["cross_track_m"]
 
 
 def distance_to_stop_m(
@@ -50,44 +113,49 @@ def distance_to_stop_m(
     longitude: float,
     stop_id: str,
 ) -> float:
-    """Calculate straight-line distance from a GPS point to a stop."""
-    normalized_stop_id = stop_id.upper()
-    if normalized_stop_id not in STOP_COORDINATES:
-        raise ValueError(f"Unknown stop: {stop_id}")
+    """Calculate straight-line distance from a GPS point to a named stop."""
+    normalized = stop_id.upper()
 
-    stop_lat, stop_lon = STOP_COORDINATES[normalized_stop_id]
-    return haversine_meters(
-        latitude, longitude, stop_lat, stop_lon
-    )
+    for stop in ROUTE_STOPS:
+        if stop["stop_id"].upper() == normalized:
+            return haversine_meters(
+                latitude,
+                longitude,
+                stop["latitude"],
+                stop["longitude"],
+            )
+
+    raise ValueError(f"Unknown stop: {stop_id}")
 
 
 def route_progress_fraction(latitude: float, longitude: float) -> float:
-    """Return projected progress from STOP_A (0) to STOP_B (1).
+    """Return estimated progress from 0.0 to 1.0 along the configured route."""
+    position = route_position(latitude, longitude)
+    total = position["total_route_m"]
 
-    Values are clamped to the segment endpoints.
-    """
-    (lat_a, lon_a) = STOP_COORDINATES["STOP_A"]
-    (lat_b, lon_b) = STOP_COORDINATES["STOP_B"]
-
-    reference_lat = math.radians((lat_a + lat_b) / 2)
-    meters_per_degree_lat = 111_320.0
-    meters_per_degree_lon = (
-        111_320.0 * math.cos(reference_lat)
-    )
-
-    ax = lon_a * meters_per_degree_lon
-    ay = lat_a * meters_per_degree_lat
-    bx = lon_b * meters_per_degree_lon
-    by = lat_b * meters_per_degree_lat
-    px = longitude * meters_per_degree_lon
-    py = latitude * meters_per_degree_lat
-
-    abx = bx - ax
-    aby = by - ay
-    length_squared = abx * abx + aby * aby
-
-    if length_squared == 0:
+    if total <= 0:
         return 0.0
 
-    fraction = ((px - ax) * abx + (py - ay) * aby) / length_squared
-    return max(0.0, min(1.0, fraction))
+    return position["along_route_m"] / total
+
+
+def upcoming_stops(latitude: float, longitude: float) -> list[dict]:
+    """Return stops whose configured route distance is ahead of the bus."""
+    position = route_position(latitude, longitude)
+    cumulative = route_cumulative_distances_m()
+
+    # The first cumulative position is the route start; stops follow it.
+    result = []
+
+    for index, stop in enumerate(ROUTE_STOPS, start=1):
+        stop_along_m = cumulative[index]
+
+        if stop_along_m > position["along_route_m"]:
+            result.append({
+                **stop,
+                "distance_remaining_m": round(
+                    stop_along_m - position["along_route_m"], 2
+                ),
+            })
+
+    return result
