@@ -51,6 +51,18 @@ export function initializeMap() {
   function createMap() {
     const L = window.L;
 
+const showAllBusesButton = document.createElement("button");
+showAllBusesButton.type = "button";
+showAllBusesButton.textContent = "Show All Buses";
+showAllBusesButton.style.display = "block";
+showAllBusesButton.style.marginBottom = "10px";
+showAllBusesButton.style.padding = "8px 12px";
+
+mapElement.parentElement.insertBefore(
+  showAllBusesButton,
+  mapElement
+);
+
     // Use the sample coordinates already recorded in the project.
     const sampleLocation = [25.170469, 75.866708];
 
@@ -116,55 +128,122 @@ export function initializeMap() {
 
     // Store API markers so they can be refreshed later if needed.
     const apiBusMarkers = [];
+  const busSelector = document.createElement("select");
+busSelector.id = "bus-selector";
+busSelector.setAttribute("aria-label", "Select a bus to locate");
 
-    async function loadApiBusMarkers() {
-      try {
-        const response = await fetch(
-          "https://trackbus-api.onrender.com/api/v1/buses"
-        );
+const defaultOption = document.createElement("option");
+defaultOption.value = "";
+defaultOption.textContent = "Find a bus...";
+busSelector.appendChild(defaultOption);
 
-        if (!response.ok) {
-          throw new Error(`Bus API returned HTTP ${response.status}`);
+busSelector.style.display = "block";
+busSelector.style.width = "100%";
+busSelector.style.maxWidth = "320px";
+busSelector.style.padding = "8px";
+busSelector.style.marginBottom = "10px";
+
+mapElement.parentElement.insertBefore(busSelector, mapElement);
+
+
+    function loadApiBusMarkers() {
+      // Historical API records for map testing only.
+      // These coordinates are not live bus positions.
+      const testBuses = [
+        {
+          bus_id: "BUS-001",
+          latitude: 25.011964,
+          longitude: 75.914284,
+          timestamp: "2026-10-15T10:25:00+00:00"
+        },
+        {
+          bus_id: "BUS-FIREBASE-TEST",
+          latitude: 25.132318,
+          longitude: 75.836061,
+          timestamp: "2026-10-22T11:45:48+00:00"
+        },
+        {
+          bus_id: "BUS-TEST-001",
+          latitude: 26.9124,
+          longitude: 75.7873,
+          timestamp: "2026-10-12T05:00:00+00:00"
+        },
+        {
+          bus_id: "BUS_001",
+          latitude: 25.138317,
+          longitude: 75.827298,
+          timestamp: "2026-10-24T12:16:36+00:00",
+          status: "inactive"
+        },
+        {
+          bus_id: "TRACKBUS-TEST-001",
+          latitude: 25.132318,
+          longitude: 75.836061,
+          timestamp: "2026-10-23T10:31:25.922403+00:00"
         }
+      ];
 
-        const result = await response.json();
-        const buses = Array.isArray(result.buses) ? result.buses : [];
+      testBuses.forEach((bus) => {
+        const marker = L.marker([
+  bus.latitude,
+  bus.longitude
+]).addTo(map);
 
-        // Remove old API markers before drawing the latest response.
-        apiBusMarkers.forEach((marker) => map.removeLayer(marker));
-        apiBusMarkers.length = 0;
+        const recordedTime = new Date(bus.timestamp).toLocaleString();
 
-        buses.forEach((bus) => {
-          const latitude = Number(bus.location?.latitude);
-          const longitude = Number(bus.location?.longitude);
+        marker.bindPopup(`
+          <strong>${bus.bus_id}</strong><br>
+          <strong>Mode:</strong> Historical test data<br>
+          <strong>Latitude:</strong> ${bus.latitude}<br>
+          <strong>Longitude:</strong> ${bus.longitude}<br>
+          <strong>Recorded:</strong> ${recordedTime}<br>
+          <strong>Status:</strong> ${bus.status ?? "Unknown"}
+        `);
 
-          if (
-            !Number.isFinite(latitude) ||
-            !Number.isFinite(longitude) ||
-            latitude < -90 ||
-            latitude > 90 ||
-            longitude < -180 ||
-            longitude > 180
-          ) {
-            return;
-          }
+        apiBusMarkers.push(marker);
+const option = document.createElement("option");
+option.value = String(apiBusMarkers.length - 1);
+option.textContent = bus.bus_id;
+busSelector.appendChild(option);
 
-          const marker = L.marker([latitude, longitude])
-            .addTo(map)
-            .bindPopup(
-              `<strong>${String(bus.bus_id ?? "Unknown bus")}</strong><br>` +
-              `API-reported location — not confirmed live<br>` +
-              `Timestamp: ${String(bus.location?.timestamp ?? "Unknown")}`
-            );
+      });
 
-          apiBusMarkers.push(marker);
-        });
-
-        console.log(`Loaded ${apiBusMarkers.length} API bus markers.`);
-      } catch (error) {
-        console.error("Unable to load API bus markers:", error);
-      }
+      console.log(`Loaded ${apiBusMarkers.length} historical test bus markers.`);
     }
+
+busSelector.addEventListener("change", () => {
+  // Hide all historical bus markers first.
+  apiBusMarkers.forEach((marker) => {
+    marker.setOpacity(0);
+    marker.closePopup();
+  });
+
+  if (busSelector.value === "") {
+    return;
+  }
+
+  const selectedIndex = Number(busSelector.value);
+  const marker = apiBusMarkers[selectedIndex];
+
+  if (marker) {
+    marker.setOpacity(1);
+    map.setView(marker.getLatLng(), 16);
+    marker.openPopup();
+  }
+});
+showAllBusesButton.addEventListener("click", () => {
+  if (apiBusMarkers.length === 0) {
+    alert("No bus locations are available yet.");
+    return;
+  }
+
+  const busBounds = L.featureGroup(apiBusMarkers).getBounds();
+
+  map.fitBounds(busBounds, {
+    padding: [40, 40],
+    maxZoom: 15
+  });
+});
 
     loadApiBusMarkers();
 
