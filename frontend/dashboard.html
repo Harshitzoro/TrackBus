@@ -1,0 +1,141 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d18">
+  <meta name="description" content="Track your campus bus with TrackBus.">
+  <title>Student Dashboard — TrackBus</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/auth.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <script type="module" src="js/dashboard.js"></script>
+
+
+</head>
+<body class="auth-page dashboard-page">
+  <header class="dashboard-nav">
+    <a class="brand" href="index.html" aria-label="TrackBus home">
+      <span class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M5 17.5V7.8C5 5.7 6.8 4 9 4h6c2.2 0 4 1.7 4 3.8v9.7"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M4 17.5h16l-1.5 3H5.5L4 17.5Z" fill="currentColor"/>
+          <path d="M7 9h10v5H7z" fill="currentColor" opacity=".35"/>
+        </svg>
+      </span>
+      <span class="brand-name">Track<span>Bus</span></span>
+    </a>
+
+    <div class="dashboard-account">
+      <span id="studentGreeting">Student</span>
+      <button id="logoutButton" class="dashboard-logout" type="button">
+        Log out
+      </button>
+    </div>
+  </header>
+
+  <main class="dashboard-main">
+    <section class="dashboard-welcome">
+      <span class="section-label">STUDENT DASHBOARD</span>
+      <h1>Your campus journey, <span>simplified.</span></h1>
+      <p>Check the latest reported information for your campus bus.</p>
+    </section>
+
+    <section class="bus-panel" aria-labelledby="busHeading">
+      <div class="panel-heading">
+        <div>
+          <span class="section-label">YOUR CAMPUS BUS</span>
+          <h2 id="busHeading">Bus tracking</h2>
+        </div>
+        <span id="busStatus" class="status-pill">Checking status</span>
+      </div>
+
+      <div class="bus-summary">
+        <div class="bus-icon" aria-hidden="true">🚌</div>
+        <div class="bus-details">
+          <h3 id="busName">Loading bus information…</h3>
+          <p id="busId">Connecting to TrackBus API</p>
+        </div>
+        <button id="refreshButton" class="refresh-button" type="button">
+          Refresh
+        </button>
+      </div>
+
+      <p id="dashboardMessage" class="dashboard-message"
+         role="status" aria-live="polite">
+        Checking the bus service…
+      </p>
+
+      <div class="location-grid">
+        <div class="location-item">
+          <span>Latitude</span>
+          <strong id="latitude">—</strong>
+        </div>
+        <div class="location-item">
+          <span>Longitude</span>
+          <strong id="longitude">—</strong>
+        </div>
+        <div class="location-item">
+          <span>Last reported</span>
+          <strong id="lastUpdated">—</strong>
+        </div>
+        <div class="location-item">
+          <span>Speed</span>
+          <strong id="busSpeed">—</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="map-panel" aria-labelledby="mapHeading">
+      <div class="panel-heading">
+        <div>
+          <span class="section-label">LOCATION</span>
+          <h2 id="mapHeading">Bus location</h2>
+        </div>
+      </div>
+
+
+
+  <div id="map"></div>
+</section>
+
+      
+<div class="map-container">
+
+  <a id="mapLink" href="#" target="_blank"
+     rel="noopener noreferrer" hidden>
+    Open location in Google Maps
+  </a>
+</div>
+
+    </section>
+
+    <p class="dashboard-note">
+      Location information depends on the latest data received by the server.
+      It may not represent the bus's current position.
+    </p>
+  </main>
+
+  <footer class="dashboard-footer">
+    TrackBus · Smarter campus mobility
+  </footer>
+</body>
+</html>
