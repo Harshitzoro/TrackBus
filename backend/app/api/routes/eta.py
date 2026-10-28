@@ -6,6 +6,8 @@ from app.services.eta_service import (
     estimate_arrival,
     estimate_route_arrivals,
 )
+from fastapi import Depends
+from app.core.auth import require_assigned_bus
 
 router = APIRouter(prefix="/eta", tags=["eta"])
 
@@ -14,7 +16,7 @@ router = APIRouter(prefix="/eta", tags=["eta"])
     "/{bus_id}",
     response_model=RouteETAResponse,
 )
-def get_route_eta(bus_id: str) -> RouteETAResponse:
+def get_route_eta(bus_id: str, _student: dict = Depends(require_assigned_bus)) -> RouteETAResponse:
     try:
         return estimate_route_arrivals(bus_id)
     except RuntimeError:
@@ -28,7 +30,7 @@ def get_route_eta(bus_id: str) -> RouteETAResponse:
     "/{bus_id}/{stop_id}",
     response_model=ETAResponse,
 )
-def get_eta(bus_id: str, stop_id: str) -> ETAResponse:
+def get_eta(bus_id: str, stop_id: str, _student: dict = Depends(require_assigned_bus)) -> ETAResponse:
     try:
         return estimate_arrival(bus_id, stop_id)
     except ValueError as exc:

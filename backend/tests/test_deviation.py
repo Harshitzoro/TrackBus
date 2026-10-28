@@ -146,8 +146,19 @@ def test_deviation_api_returns_status(monkeypatch):
         ),
     )
 
-    client = TestClient(app)
-    response = client.get("/api/v1/deviation/BUS_001")
+    from app.core.auth import get_current_student
+
+    app.dependency_overrides[get_current_student] = lambda: {
+        "uid": "test-student-uid",
+        "role": "Student",
+        "bus_id": "BUS_001",
+    }
+
+    try:
+        client = TestClient(app)
+        response = client.get("/api/v1/deviation/BUS_001")
+    finally:
+        app.dependency_overrides.pop(get_current_student, None)
 
     assert response.status_code == 200
     assert response.json()["status"] == "on_route"

@@ -5,12 +5,21 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.core.auth import get_current_student
 from app.schemas.eta import ETAResponse
 from app.services import eta_service
 from app.services.route_config import ROUTE_START, ROUTE_STOPS
 
 client = TestClient(app)
-
+@pytest.fixture
+def authenticated_student():
+    app.dependency_overrides[get_current_student] = lambda: {
+        "uid": "test-student-uid",
+        "role": "Student",
+        "bus_id": "BUS_001",
+    }
+    yield
+    app.dependency_overrides.pop(get_current_student, None)
 
 def fresh_location(
     latitude: float,
@@ -125,7 +134,7 @@ def test_eta_rejects_unknown_stop():
         eta_service.estimate_arrival("BUS_001", "STOP_UNKNOWN")
 
 
-def test_eta_endpoint_returns_estimate(monkeypatch):
+def test_eta_endpoint_returns_estimate(monkeypatch, authenticated_student):
     patch_location(
         monkeypatch,
         fresh_location(
@@ -160,7 +169,7 @@ def test_eta_to_first_stop_unavailable_when_bus_has_passed_it(
     assert result.status == "unavailable"
 
 
-def test_route_eta_endpoint_returns_route_response(monkeypatch):
+def test_route_eta_endpoint_returns_route_response(monkeypatch, authenticated_student):
     patch_location(
         monkeypatch,
         fresh_location(
@@ -177,3 +186,16 @@ def test_route_eta_endpoint_returns_route_response(monkeypatch):
     assert data["status"] == "available"
     assert data["next_stop_id"] == "STOP_01"
     assert isinstance(data["upcoming_stops"], list)
+
+def test_student_can_access_assigned_bus(authenticated_student):
+    response = client.get("/api/v1/eta/BUS_001")
+
+    # The request should pass authentication and authorization.
+    # The endpoint may return 200 or a service-related 503.
+    assert response.status_code in (200, 503)
+
+
+def test_student_cannot_access_unassigned_bus(authenticated_student):
+    response = client.get("/api/v1/eta/BUS_002")
+
+    assert response.status_code == 403
