@@ -146,75 +146,114 @@ busSelector.style.marginBottom = "10px";
 mapElement.parentElement.insertBefore(busSelector, mapElement);
 
 
-    function loadApiBusMarkers() {
-      // Historical API records for map testing only.
-      // These coordinates are not live bus positions.
-      const testBuses = [
-        {
-          bus_id: "BUS-001",
-          latitude: 25.011964,
-          longitude: 75.914284,
-          timestamp: "2026-10-15T10:25:00+00:00"
-        },
-        {
-          bus_id: "BUS-FIREBASE-TEST",
-          latitude: 25.132318,
-          longitude: 75.836061,
-          timestamp: "2026-10-22T11:45:48+00:00"
-        },
-        {
-          bus_id: "BUS-TEST-001",
-          latitude: 26.9124,
-          longitude: 75.7873,
-          timestamp: "2026-10-12T05:00:00+00:00"
-        },
-        {
-          bus_id: "BUS_001",
-          latitude: 25.138317,
-          longitude: 75.827298,
-          timestamp: "2026-10-24T12:16:36+00:00",
-          status: "inactive"
-        },
-        {
-          bus_id: "TRACKBUS-TEST-001",
-          latitude: 25.132318,
-          longitude: 75.836061,
-          timestamp: "2026-10-23T10:31:25.922403+00:00"
+    async function loadApiBusMarkers() {
+      const apiUrl = "https://trackbus-api.onrender.com/api/v1/buses";
+
+      try {
+        const response = await fetch(apiUrl, { cache: "no-store" });
+
+        if (!response.ok) {
+          throw new Error(`Bus API request failed: ${response.status}`);
         }
-      ];
 
-      testBuses.forEach((bus) => {
-        const marker = L.marker([
-  bus.latitude,
-  bus.longitude
-]).addTo(map);
+        const result = await response.json();
+        const buses = Array.isArray(result)
+          ? result
+          : result.buses;
 
-        const recordedTime = new Date(bus.timestamp).toLocaleString();
+        if (!Array.isArray(buses)) {
+          throw new Error("Unexpected bus API response format.");
+        }
 
-        marker.bindPopup(`
-          <strong>${bus.bus_id}</strong><br>
-          <strong>Mode:</strong> Historical test data<br>
-          <strong>Latitude:</strong> ${bus.latitude}<br>
-          <strong>Longitude:</strong> ${bus.longitude}<br>
-          <strong>Recorded:</strong> ${recordedTime}<br>
-          <strong>Status:</strong> ${bus.status ?? "Unknown"}
-        `);
+        // Keep the previous markers if the API temporarily returns no buses.
+        if (buses.length === 0) {
+          console.warn("No bus records returned by the API.");
+          return;
+        }
 
-        apiBusMarkers.push(marker);
-const option = document.createElement("option");
-option.value = String(apiBusMarkers.length - 1);
-option.textContent = bus.bus_id;
-busSelector.appendChild(option);
+        // Remove old API markers before displaying the latest records.
+        apiBusMarkers.forEach((marker) => map.removeLayer(marker));
+        apiBusMarkers.length = 0;
 
-      });
+        // Rebuild the selector without duplicate options.
+        busSelector.replaceChildren();
 
-      console.log(`Loaded ${apiBusMarkers.length} historical test bus markers.`);
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "Find a bus...";
+        busSelector.appendChild(defaultOption);
+
+        buses.forEach((bus) => {
+          const latitude = Number(
+            bus.location?.latitude ?? bus.latitude
+          );
+          const longitude = Number(
+            bus.location?.longitude ?? bus.longitude
+          );
+
+          if (
+            !Number.isFinite(latitude) ||
+            !Number.isFinite(longitude) ||
+            latitude < -90 || latitude > 90 ||
+            longitude < -180 || longitude > 180
+          ) {
+            console.warn("Skipping invalid bus coordinates:", bus.bus_id);
+            return;
+          }
+
+          const busId = String(bus.bus_id ?? bus.busNumber ?? "Unknown bus");
+          const marker = L.marker([latitude, longitude]).addTo(map);
+
+          const timestamp = bus.location?.timestamp ?? bus.timestamp;
+          const recordedTime = timestamp
+            ? new Date(timestamp).toLocaleString()
+            : "Unavailable";
+
+          const speed = bus.location?.speed_kmph ?? bus.speed_kmph;
+          const speedText =
+            speed !== null && speed !== undefined && speed !== "" &&
+            Number.isFinite(Number(speed))
+              ? `${Number(speed)} km/h`
+              : "Unavailable";
+
+          const popup = document.createElement("div");
+          const title = document.createElement("strong");
+          title.textContent = busId;
+          popup.appendChild(title);
+
+          [
+            `Mode: API record; live status unconfirmed`,
+            `Latitude: ${latitude}`,
+            `Longitude: ${longitude}`,
+            `Recorded: ${recordedTime}`,
+            `Speed: ${speedText}`
+          ].forEach((line) => {
+            popup.appendChild(document.createElement("br"));
+            popup.appendChild(document.createTextNode(line));
+          });
+
+          marker.bindPopup(popup);
+          apiBusMarkers.push(marker);
+
+          const option = document.createElement("option");
+          option.value = String(apiBusMarkers.length - 1);
+          option.textContent = busId;
+          busSelector.appendChild(option);
+        });
+
+        console.log(
+          `Map refreshed: ${apiBusMarkers.length} valid bus markers.`,
+          new Date().toLocaleTimeString()
+        );
+
+      } catch (error) {
+        console.error("Unable to refresh bus locations:", error);
+      }
     }
 
 busSelector.addEventListener("change", () => {
-  // Hide all historical bus markers first.
   apiBusMarkers.forEach((marker) => {
-    marker.setOpacity(0);
+    marker.setOpacity(1);
     marker.closePopup();
   });
 
@@ -223,13 +262,18 @@ busSelector.addEventListener("change", () => {
   }
 
   const selectedIndex = Number(busSelector.value);
-  const marker = apiBusMarkers[selectedIndex];
+  const selectedMarker = apiBusMarkers[selectedIndex];
 
-  if (marker) {
-    marker.setOpacity(1);
-    map.setView(marker.getLatLng(), 16);
-    marker.openPopup();
+  if (!selectedMarker) {
+    return;
   }
+
+  apiBusMarkers.forEach((marker) => {
+    marker.setOpacity(marker === selectedMarker ? 1 : 0);
+  });
+
+  map.setView(selectedMarker.getLatLng(), 16);
+  selectedMarker.openPopup();
 });
 showAllBusesButton.addEventListener("click", () => {
   if (apiBusMarkers.length === 0) {
@@ -237,40 +281,64 @@ showAllBusesButton.addEventListener("click", () => {
     return;
   }
 
+  apiBusMarkers.forEach((marker) => {
+    marker.setOpacity(1);
+    marker.closePopup();
+  });
+
+  busSelector.value = "";
+
   const busBounds = L.featureGroup(apiBusMarkers).getBounds();
 
-  map.fitBounds(busBounds, {
-    padding: [40, 40],
-    maxZoom: 15
-  });
+  if (busBounds.isValid()) {
+    map.fitBounds(busBounds, {
+      padding: [40, 40],
+      maxZoom: 15
+    });
+  }
 });
-
+    // Load bus locations immediately.
     loadApiBusMarkers();
 
-  // Demo stop coordinates from the existing project configuration.
-const stopA = [25.1386742, 75.8260137];
-const stopB = [25.1421876, 75.8284360];
+    // Refresh bus locations every 10 seconds without reloading the page.
+    const busRefreshTimer = window.setInterval(() => {
+      loadApiBusMarkers();
+    }, 10000);
 
-// Add the first stop.
-L.marker(stopA)
-  .addTo(map)
-  .bindPopup("Stop A");
+    // Demo stop coordinates from the existing project configuration.
+    const stopA = [25.1386742, 75.8260137];
+    const stopB = [25.1421876, 75.8284360];
 
-// Add the second stop.
-L.marker(stopB)
-  .addTo(map)
-  .bindPopup("Stop B");
+    // Mark demo stops clearly.
+    const stopAMarker = L.marker(stopA)
+      .addTo(map)
+      .bindPopup("<strong>Stop A</strong><br>Demo stop — test data");
 
-// Draw a straight line between the two stops.
-const routeLine = L.polyline([stopA, stopB], {
-  color: "blue",
-  weight: 4
-}).addTo(map);
+    const stopBMarker = L.marker(stopB)
+      .addTo(map)
+      .bindPopup("<strong>Stop B</strong><br>Demo stop — test data");
 
-// Adjust the map so both stops and the route are visible.
-map.fitBounds(routeLine.getBounds(), {
-  padding: [30, 30]
-});
+    // Draw the demo route between the two stops.
+    const routeLine = L.polyline([stopA, stopB], {
+      color: "blue",
+      weight: 5,
+      opacity: 0.8
+    }).addTo(map);
+
+    routeLine.bindPopup("Demo route: Stop A to Stop B");
+
+const initialBounds = L.featureGroup([
+  ...apiBusMarkers,
+  L.marker(stopA),
+  L.marker(stopB)
+]).getBounds();
+
+if (initialBounds.isValid()) {
+  map.fitBounds(initialBounds, {
+    padding: [40, 40],
+    maxZoom: 13
+  });
+}
 
     console.log("TrackBus map initialized successfully.");
   }
