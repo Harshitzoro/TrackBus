@@ -21,11 +21,6 @@
 />
 
 
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
-
   <script type="module" src="js/dashboard.js"></script>
 
 
@@ -104,29 +99,28 @@
       </div>
     </section>
 
-    <section class="map-panel" aria-labelledby="mapHeading">
-      <div class="panel-heading">
-        <div>
-          <span class="section-label">LOCATION</span>
-          <h2 id="mapHeading">Bus location</h2>
-        </div>
-      </div>
-
-
+   <section class="map-panel" aria-labelledby="mapHeading">
+  <div class="panel-heading">
+    <div>
+      <span class="section-label">LOCATION</span>
+      <h2 id="mapHeading">Bus location</h2>
+    </div>
+  </div>
 
   <div id="map"></div>
+
+  <div class="map-container">
+    <a
+      id="mapLink"
+      href="#"
+      target="_blank"
+      rel="noopener noreferrer"
+      hidden
+    >
+      Open location in Google Maps
+    </a>
+  </div>
 </section>
-
-      
-<div class="map-container">
-
-  <a id="mapLink" href="#" target="_blank"
-     rel="noopener noreferrer" hidden>
-    Open location in Google Maps
-  </a>
-</div>
-
-    </section>
 
     <p class="dashboard-note">
       Location information depends on the latest data received by the server.

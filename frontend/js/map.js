@@ -1,6 +1,5 @@
 import { auth } from "./firebase.js";
 
-import { auth } from "./firebase.js";
 
 export function initializeMap() {
   const mapElement = document.querySelector("#map");
