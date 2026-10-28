@@ -23,45 +23,39 @@ let requestInProgress = false;
 
 
 function setMessage(text) {
-  message.textContent = text;
-}
-
-function formatTimestamp(value) {
-  if (!value) return "Not reported";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return String(value);
+  if (message) {
+    message.textContent = text;
+  } else {
+    console.error(
+      'Dashboard element "#dashboardMessage" was not found.'
+    );
   }
-
-  return date.toLocaleString();
 }
+
+
 
 
 function showNoLocation() {
-  $("latitude").textContent = "—";
-  $("longitude").textContent = "—";
-  $("lastUpdated").textContent = "Not reported";
-  $("busSpeed").textContent = "—";
-  $("mapMessage").textContent =
-    "Waiting for valid bus coordinates from the API.";
-  $("mapLink").hidden = true;
+  const latitude = $("latitude");
+  const longitude = $("longitude");
+  const lastUpdated = $("lastUpdated");
+  const busSpeed = $("busSpeed");
+  const mapMessage = $("mapMessage");
+  const mapLink = $("mapLink");
 
-  if (busMarker && busMap) {
-    busMap.removeLayer(busMarker);
-    busMarker = null;
+  if (latitude) latitude.textContent = "—";
+  if (longitude) longitude.textContent = "—";
+  if (lastUpdated) lastUpdated.textContent = "Not reported";
+  if (busSpeed) busSpeed.textContent = "—";
+
+  if (mapMessage) {
+    mapMessage.textContent =
+      "Waiting for valid bus coordinates from the API.";
   }
 
-  if (busAccuracyCircle && busMap) {
-    busMap.removeLayer(busAccuracyCircle);
-    busAccuracyCircle = null;
-  }
-
-  if (busMap) {
-    busMap.setView([22.9734, 78.6569], 5);
-  }
+  if (mapLink) mapLink.hidden = true;
 }
+
 
 
 function showLocation(location) {
@@ -93,7 +87,10 @@ function showLocation(location) {
       ? "Not reported"
       : `${location.speed_kmph} km/h`;
 
-  $("mapMessage").textContent = "Latest reported coordinates available";
+  const mapMessage = $("mapMessage");
+if (mapMessage) {
+  mapMessage.textContent = "Latest reported coordinates available";
+}
 
   const mapLink = $("mapLink");
   mapLink.href =
