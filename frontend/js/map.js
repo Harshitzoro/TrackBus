@@ -1,4 +1,6 @@
 
+import { auth } from "./firebase.js";
+
 export function initializeMap() {
   const mapElement = document.querySelector("#map");
 
@@ -121,11 +123,6 @@ mapElement.parentElement.insertBefore(
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
-    // Keep the demo marker, clearly labelled as sample data.
-    L.marker(sampleLocation)
-      .addTo(map)
-      .bindPopup("Demo Bus - sample location (not live)");
-
     // Store API markers so they can be refreshed later if needed.
     const apiBusMarkers = [];
   const busSelector = document.createElement("select");
@@ -150,7 +147,35 @@ mapElement.parentElement.insertBefore(busSelector, mapElement);
       const apiUrl = "https://trackbus-api.onrender.com/api/v1/buses";
 
       try {
-        const response = await fetch(apiUrl, { cache: "no-store" });
+        const user = auth.currentUser;
+
+        if (!user) {
+          console.warn("Bus map waiting for Firebase sign-in.");
+          return;
+        }
+
+        const idToken = await user.getIdToken();
+
+        const response = await fetch(apiUrl, {
+          cache: "no-store",
+          headers: {
+            Authorization: `Bearer ${idToken}`
+          }
+        });
+
+        if (response.status === 401) {
+          console.error(
+            "Bus API authentication failed. Check the Firebase ID token."
+          );
+          return;
+        }
+
+        if (response.status === 403) {
+          console.error(
+            "Bus API access denied. Check the student's bus assignment."
+          );
+          return;
+        }
 
         if (!response.ok) {
           throw new Error(`Bus API request failed: ${response.status}`);
@@ -202,7 +227,17 @@ mapElement.parentElement.insertBefore(busSelector, mapElement);
           }
 
           const busId = String(bus.bus_id ?? bus.busNumber ?? "Unknown bus");
-          const marker = L.marker([latitude, longitude]).addTo(map);
+          const busIcon = L.divIcon({
+            html: '<span style="font-size:28px;">🚌</span>',
+            className: "",
+            iconSize: [36, 36],
+            iconAnchor: [18, 18],
+            popupAnchor: [0, -18]
+          });
+
+          const marker = L.marker([latitude, longitude], {
+            icon: busIcon
+          }).addTo(map);
 
           const timestamp = bus.location?.timestamp ?? bus.timestamp;
           const recordedTime = timestamp
@@ -240,6 +275,17 @@ mapElement.parentElement.insertBefore(busSelector, mapElement);
           option.textContent = busId;
           busSelector.appendChild(option);
         });
+
+        if (apiBusMarkers.length > 0) {
+          const busBounds = L.featureGroup(apiBusMarkers).getBounds();
+
+          if (busBounds.isValid()) {
+            map.fitBounds(busBounds, {
+              padding: [40, 40],
+              maxZoom: 15
+            });
+          }
+        }
 
         console.log(
           `Map refreshed: ${apiBusMarkers.length} valid bus markers.`,
@@ -304,41 +350,6 @@ showAllBusesButton.addEventListener("click", () => {
     const busRefreshTimer = window.setInterval(() => {
       loadApiBusMarkers();
     }, 10000);
-
-    // Demo stop coordinates from the existing project configuration.
-    const stopA = [25.1386742, 75.8260137];
-    const stopB = [25.1421876, 75.8284360];
-
-    // Mark demo stops clearly.
-    const stopAMarker = L.marker(stopA)
-      .addTo(map)
-      .bindPopup("<strong>Stop A</strong><br>Demo stop — test data");
-
-    const stopBMarker = L.marker(stopB)
-      .addTo(map)
-      .bindPopup("<strong>Stop B</strong><br>Demo stop — test data");
-
-    // Draw the demo route between the two stops.
-    const routeLine = L.polyline([stopA, stopB], {
-      color: "blue",
-      weight: 5,
-      opacity: 0.8
-    }).addTo(map);
-
-    routeLine.bindPopup("Demo route: Stop A to Stop B");
-
-const initialBounds = L.featureGroup([
-  ...apiBusMarkers,
-  L.marker(stopA),
-  L.marker(stopB)
-]).getBounds();
-
-if (initialBounds.isValid()) {
-  map.fitBounds(initialBounds, {
-    padding: [40, 40],
-    maxZoom: 13
-  });
-}
 
     console.log("TrackBus map initialized successfully.");
   }
