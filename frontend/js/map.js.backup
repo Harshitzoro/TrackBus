@@ -1,0 +1,103 @@
+
+export function initializeMap() {
+  const mapElement = document.querySelector("#map");
+
+  if (!mapElement) {
+    console.error("TrackBus map container was not found.");
+    return;
+  }
+
+  mapElement.textContent = "Loading map...";
+
+  // Load Leaflet's stylesheet without editing index.html.
+  if (!document.querySelector("#leaflet-css")) {
+    const leafletCss = document.createElement("link");
+
+    leafletCss.id = "leaflet-css";
+    leafletCss.rel = "stylesheet";
+    leafletCss.href =
+      "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+
+    document.head.appendChild(leafletCss);
+  }
+
+  // Load Leaflet's JavaScript library.
+  function loadLeaflet() {
+    if (window.L) {
+      createMap();
+      return;
+    }
+
+    if (document.querySelector("#leaflet-js")) {
+      return;
+    }
+
+    const leafletScript = document.createElement("script");
+
+    leafletScript.id = "leaflet-js";
+    leafletScript.src =
+      "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+
+    leafletScript.onload = createMap;
+
+    leafletScript.onerror = () => {
+      mapElement.textContent =
+        "Map could not load. Check your internet connection.";
+    };
+
+    document.head.appendChild(leafletScript);
+  }
+
+  function createMap() {
+    const L = window.L;
+
+    // Use the sample coordinates already recorded in the project.
+    const sampleLocation = [25.170469, 75.866708];
+
+    mapElement.textContent = "";
+    mapElement.style.minHeight = "18rem";
+
+    const map = L.map(mapElement).setView(sampleLocation, 15);
+
+    // OpenStreetMap background tiles.
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Sample marker only; this is not a verified live bus position.
+   const busMarker = L.marker(sampleLocation)
+  .addTo(map)
+  .bindPopup("Demo Bus - BUS_001");
+  // Demo stop coordinates from the existing project configuration.
+const stopA = [25.1386742, 75.8260137];
+const stopB = [25.1421876, 75.8284360];
+
+// Add the first stop.
+L.marker(stopA)
+  .addTo(map)
+  .bindPopup("Stop A");
+
+// Add the second stop.
+L.marker(stopB)
+  .addTo(map)
+  .bindPopup("Stop B");
+
+// Draw a straight line between the two stops.
+const routeLine = L.polyline([stopA, stopB], {
+  color: "blue",
+  weight: 4
+}).addTo(map);
+
+// Adjust the map so both stops and the route are visible.
+map.fitBounds(routeLine.getBounds(), {
+  padding: [30, 30]
+});
+
+busMarker.openPopup();
+
+    console.log("TrackBus map initialized successfully.");
+  }
+
+  loadLeaflet();
+}

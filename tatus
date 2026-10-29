@@ -1,0 +1,192 @@
+[1mdiff --git a/frontend/js/map.js b/frontend/js/map.js[m
+[1mindex bee43bd..319c32c 100644[m
+[1m--- a/frontend/js/map.js[m
+[1m+++ b/frontend/js/map.js[m
+[36m@@ -51,6 +51,18 @@[m [mexport function initializeMap() {[m
+   function createMap() {[m
+     const L = window.L;[m
+ [m
+[32m+[m[32mconst showAllBusesButton = document.createElement("button");[m
+[32m+[m[32mshowAllBusesButton.type = "button";[m
+[32m+[m[32mshowAllBusesButton.textContent = "Show All Buses";[m
+[32m+[m[32mshowAllBusesButton.style.display = "block";[m
+[32m+[m[32mshowAllBusesButton.style.marginBottom = "10px";[m
+[32m+[m[32mshowAllBusesButton.style.padding = "8px 12px";[m
+[32m+[m
+[32m+[m[32mmapElement.parentElement.insertBefore([m
+[32m+[m[32m  showAllBusesButton,[m
+[32m+[m[32m  mapElement[m
+[32m+[m[32m);[m
+[32m+[m
+     // Use the sample coordinates already recorded in the project.[m
+     const sampleLocation = [25.170469, 75.866708];[m
+ [m
+[36m@@ -116,56 +128,123 @@[m [mexport function initializeMap() {[m
+ [m
+     // Store API markers so they can be refreshed later if needed.[m
+     const apiBusMarkers = [];[m
+[31m-[m
+[31m-    async function loadApiBusMarkers() {[m
+[31m-      try {[m
+[31m-        const response = await fetch([m
+[31m-          "https://trackbus-api.onrender.com/api/v1/buses"[m
+[31m-        );[m
+[31m-[m
+[31m-        if (!response.ok) {[m
+[31m-          throw new Error(`Bus API returned HTTP ${response.status}`);[m
+[32m+[m[32m  const busSelector = document.createElement("select");[m
+[32m+[m[32mbusSelector.id = "bus-selector";[m
+[32m+[m[32mbusSelector.setAttribute("aria-label", "Select a bus to locate");[m
+[32m+[m
+[32m+[m[32mconst defaultOption = document.createElement("option");[m
+[32m+[m[32mdefaultOption.value = "";[m
+[32m+[m[32mdefaultOption.textContent = "Find a bus...";[m
+[32m+[m[32mbusSelector.appendChild(defaultOption);[m
+[32m+[m
+[32m+[m[32mbusSelector.style.display = "block";[m
+[32m+[m[32mbusSelector.style.width = "100%";[m
+[32m+[m[32mbusSelector.style.maxWidth = "320px";[m
+[32m+[m[32mbusSelector.style.padding = "8px";[m
+[32m+[m[32mbusSelector.style.marginBottom = "10px";[m
+[32m+[m
+[32m+[m[32mmapElement.parentElement.insertBefore(busSelector, mapElement);[m
+[32m+[m
+[32m+[m
+[32m+[m[32m    function loadApiBusMarkers() {[m
+[32m+[m[32m      // Historical API records for map testing only.[m
+[32m+[m[32m      // These coordinates are not live bus positions.[m
+[32m+[m[32m      const testBuses = [[m
+[32m+[m[32m        {[m
+[32m+[m[32m          bus_id: "BUS-001",[m
+[32m+[m[32m          latitude: 25.011964,[m
+[32m+[m[32m          longitude: 75.914284,[m
+[32m+[m[32m          timestamp: "2026-10-15T10:25:00+00:00"[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          bus_id: "BUS-FIREBASE-TEST",[m
+[32m+[m[32m          latitude: 25.132318,[m
+[32m+[m[32m          longitude: 75.836061,[m
+[32m+[m[32m          timestamp: "2026-10-22T11:45:48+00:00"[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          bus_id: "BUS-TEST-001",[m
+[32m+[m[32m          latitude: 26.9124,[m
+[32m+[m[32m          longitude: 75.7873,[m
+[32m+[m[32m          timestamp: "2026-10-12T05:00:00+00:00"[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          bus_id: "BUS_001",[m
+[32m+[m[32m          latitude: 25.138317,[m
+[32m+[m[32m          longitude: 75.827298,[m
+[32m+[m[32m          timestamp: "2026-10-24T12:16:36+00:00",[m
+[32m+[m[32m          status: "inactive"[m
+[32m+[m[32m        },[m
+[32m+[m[32m        {[m
+[32m+[m[32m          bus_id: "TRACKBUS-TEST-001",[m
+[32m+[m[32m          latitude: 25.132318,[m
+[32m+[m[32m          longitude: 75.836061,[m
+[32m+[m[32m          timestamp: "2026-10-23T10:31:25.922403+00:00"[m
+         }[m
+[32m+[m[32m      ];[m
+[32m+[m
+[32m+[m[32m      testBuses.forEach((bus) => {[m
+[32m+[m[32m        const marker = L.marker([[m
+[32m+[m[32m  bus.latitude,[m
+[32m+[m[32m  bus.longitude[m
+[32m+[m[32m]).addTo(map);[m
+[32m+[m
+[32m+[m[32m        const recordedTime = new Date(bus.timestamp).toLocaleString();[m
+[32m+[m
+[32m+[m[32m        marker.bindPopup(`[m
+[32m+[m[32m          <strong>${bus.bus_id}</strong><br>[m
+[32m+[m[32m          <strong>Mode:</strong> Historical test data<br>[m
+[32m+[m[32m          <strong>Latitude:</strong> ${bus.latitude}<br>[m
+[32m+[m[32m          <strong>Longitude:</strong> ${bus.longitude}<br>[m
+[32m+[m[32m          <strong>Recorded:</strong> ${recordedTime}<br>[m
+[32m+[m[32m          <strong>Status:</strong> ${bus.status ?? "Unknown"}[m
+[32m+[m[32m        `);[m
+[32m+[m
+[32m+[m[32m        apiBusMarkers.push(marker);[m
+[32m+[m[32mconst option = document.createElement("option");[m
+[32m+[m[32moption.value = String(apiBusMarkers.length - 1);[m
+[32m+[m[32moption.textContent = bus.bus_id;[m
+[32m+[m[32mbusSelector.appendChild(option);[m
+ [m
+[31m-        const result = await response.json();[m
+[31m-        const buses = Array.isArray(result.buses) ? result.buses : [];[m
+[31m-[m
+[31m-        // Remove old API markers before drawing the latest response.[m
+[31m-        apiBusMarkers.forEach((marker) => map.removeLayer(marker));[m
+[31m-        apiBusMarkers.length = 0;[m
+[31m-[m
+[31m-        buses.forEach((bus) => {[m
+[31m-          const latitude = Number(bus.location?.latitude);[m
+[31m-          const longitude = Number(bus.location?.longitude);[m
+[31m-[m
+[31m-          if ([m
+[31m-            !Number.isFinite(latitude) ||[m
+[31m-            !Number.isFinite(longitude) ||[m
+[31m-            latitude < -90 ||[m
+[31m-            latitude > 90 ||[m
+[31m-            longitude < -180 ||[m
+[31m-            longitude > 180[m
+[31m-          ) {[m
+[31m-            return;[m
+[31m-          }[m
+[32m+[m[32m      });[m
+ [m
+[31m-          const marker = L.marker([latitude, longitude])[m
+[31m-            .addTo(map)[m
+[31m-            .bindPopup([m
+[31m-              `<strong>${String(bus.bus_id ?? "Unknown bus")}</strong><br>` +[m
+[31m-              `API-reported location — not confirmed live<br>` +[m
+[31m-              `Timestamp: ${String(bus.location?.timestamp ?? "Unknown")}`[m
+[31m-            );[m
+[31m-[m
+[31m-          apiBusMarkers.push(marker);[m
+[31m-        });[m
+[31m-[m
+[31m-        console.log(`Loaded ${apiBusMarkers.length} API bus markers.`);[m
+[31m-      } catch (error) {[m
+[31m-        console.error("Unable to load API bus markers:", error);[m
+[31m-      }[m
+[32m+[m[32m      console.log(`Loaded ${apiBusMarkers.length} historical test bus markers.`);[m
+     }[m
+ [m
+[32m+[m[32mbusSelector.addEventListener("change", () => {[m
+[32m+[m[32m  // Hide all historical bus markers first.[m
+[32m+[m[32m  apiBusMarkers.forEach((marker) => {[m
+[32m+[m[32m    marker.setOpacity(0);[m
+[32m+[m[32m    marker.closePopup();[m
+[32m+[m[32m  });[m
+[32m+[m
+[32m+[m[32m  if (busSelector.value === "") {[m
+[32m+[m[32m    return;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  const selectedIndex = Number(busSelector.value);[m
+[32m+[m[32m  const marker = apiBusMarkers[selectedIndex];[m
+[32m+[m
+[32m+[m[32m  if (marker) {[m
+[32m+[m[32m    marker.setOpacity(1);[m
+[32m+[m[32m    map.setView(marker.getLatLng(), 16);[m
+[32m+[m[32m    marker.openPopup();[m
+[32m+[m[32m  }[m
+[32m+[m[32m});[m
+[32m+[m[32mshowAllBusesButton.addEventListener("click", () => {[m
+[32m+[m[32m  if (apiBusMarkers.length === 0) {[m
+[32m+[m[32m    alert("No bus locations are available yet.");[m
+[32m+[m[32m    return;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  const busBounds = L.featureGroup(apiBusMarkers).getBounds();[m
+[32m+[m
+[32m+[m[32m  map.fitBounds(busBounds, {[m
+[32m+[m[32m    padding: [40, 40],[m
+[32m+[m[32m    maxZoom: 15[m
+[32m+[m[32m  });[m
+[32m+[m[32m});[m
+[32m+[m
+     loadApiBusMarkers();[m
+ [m
+   // Demo stop coordinates from the existing project configuration.[m

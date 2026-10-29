@@ -32,6 +32,7 @@
     "settings": {
         "files.exclude": {
             "**/.pio": true
-        }
+        },
+        "liveServer.settings.multiRootWorkspaceName": "Frontend"
     }
 }
