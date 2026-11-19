@@ -1,7 +1,7 @@
 
 import { auth } from "./firebase.js";
 
-const API_BASE_URL = "http://localhost:8000/api/v1";
+const API_BASE_URL = "https://trackbus-api.onrender.com/api/v1";
 
 export async function getBuses() {
   const user = auth.currentUser;
