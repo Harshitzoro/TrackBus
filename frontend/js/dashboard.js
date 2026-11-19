@@ -32,7 +32,19 @@ function setMessage(text) {
   }
 }
 
+function formatTimestamp(timestamp) {
+  if (!timestamp) {
+    return "Not reported";
+  }
 
+  const date = new Date(timestamp);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Invalid timestamp";
+  }
+
+  return date.toLocaleString();
+}
 
 
 function showNoLocation() {
