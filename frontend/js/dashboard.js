@@ -2,7 +2,7 @@
 import { auth } from "./firebase.js";
 import { onAuthStateChanged, signOut } from
   "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-import { getBuses } from "./api.js";
+import { getBuses, getReverseGeocoding } from "./api.js";
 import { initializeMap } from "./map.js";
 
 
@@ -46,6 +46,40 @@ function formatTimestamp(timestamp) {
   return date.toLocaleString();
 }
 
+async function updateBusAddress(latitude, longitude) {
+  const addressElement = $("busAddress");
+
+  if (!addressElement) {
+    console.warn('Dashboard element "#busAddress" was not found.');
+    return;
+  }
+
+  const coordinateKey = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+
+  if (addressElement.dataset.coordinateKey === coordinateKey) {
+    return;
+  }
+
+  addressElement.dataset.coordinateKey = coordinateKey;
+  addressElement.textContent = "Finding bus location...";
+
+  try {
+    const result = await getReverseGeocoding(latitude, longitude);
+
+    // Prevent an older lookup from replacing a newer bus location.
+    if (addressElement.dataset.coordinateKey !== coordinateKey) {
+      return;
+    }
+
+    addressElement.textContent = result.address;
+  } catch (error) {
+    console.error("Address lookup failed:", error);
+
+    if (addressElement.dataset.coordinateKey === coordinateKey) {
+      addressElement.textContent = "Address temporarily unavailable";
+    }
+  }
+}
 
 function showNoLocation() {
   const latitude = $("latitude");
@@ -66,6 +100,12 @@ function showNoLocation() {
   }
 
   if (mapLink) mapLink.hidden = true;
+  const busAddress = $("busAddress");
+
+  if (busAddress) {
+    busAddress.textContent = "Location not available";
+    delete busAddress.dataset.coordinateKey;
+  }
 }
 
 
@@ -93,6 +133,7 @@ function showLocation(location) {
 
   $("latitude").textContent = lat.toFixed(6);
   $("longitude").textContent = lng.toFixed(6);
+  updateBusAddress(lat, lng);
   $("lastUpdated").textContent = formatTimestamp(location.timestamp);
   $("busSpeed").textContent =
     location.speed_kmph == null

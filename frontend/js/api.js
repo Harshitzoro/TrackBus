@@ -26,3 +26,35 @@ export async function getBuses() {
 
   return response.json();
 }
+
+export async function getReverseGeocoding(latitude, longitude) {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error("Please sign in before requesting location data.");
+  }
+
+  const idToken = await user.getIdToken();
+
+  const params = new URLSearchParams({
+    latitude: latitude,
+    longitude: longitude
+  });
+
+  const response = await fetch(
+    `${API_BASE_URL}/geocoding/reverse?${params.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+        Accept: "application/json"
+      }
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Location lookup failed (${response.status})`);
+  }
+
+  return response.json();
+}

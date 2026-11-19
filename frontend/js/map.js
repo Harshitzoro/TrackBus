@@ -1,5 +1,5 @@
 import { auth } from "./firebase.js";
-
+import { getReverseGeocoding } from "./api.js";
 
 export function initializeMap() {
   const mapElement = document.querySelector("#map");
@@ -125,6 +125,31 @@ mapElement.parentElement.insertBefore(
 
     // Store API markers so they can be refreshed later if needed.
     const apiBusMarkers = [];
+    // Cache address lookups to avoid repeated API requests.
+    const addressCache = new Map();
+    
+    async function loadBusAddress(latitude, longitude, addressElement) {
+      const coordinateKey =
+        `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+    
+      if (addressCache.has(coordinateKey)) {
+        addressElement.textContent = addressCache.get(coordinateKey);
+        return;
+      }
+    
+      addressElement.textContent = "Finding bus location...";
+    
+      try {
+        const result = await getReverseGeocoding(latitude, longitude);
+        const address = result.address || "Address unavailable";
+    
+        addressCache.set(coordinateKey, address);
+        addressElement.textContent = address;
+      } catch (error) {
+        console.error("Map address lookup failed:", error);
+        addressElement.textContent = "Address temporarily unavailable";
+      }
+    }
   const busSelector = document.createElement("select");
 busSelector.id = "bus-selector";
 busSelector.setAttribute("aria-label", "Select a bus to locate");
@@ -252,10 +277,27 @@ mapElement.parentElement.insertBefore(busSelector, mapElement);
               : "Unavailable";
 
           const popup = document.createElement("div");
+          
+          // Bus ID
           const title = document.createElement("strong");
           title.textContent = busId;
           popup.appendChild(title);
-
+          
+          // Readable address
+          const addressLabel = document.createElement("div");
+          addressLabel.style.marginTop = "8px";
+          addressLabel.style.fontWeight = "600";
+          addressLabel.textContent = "Bus location:";
+          
+          popup.appendChild(addressLabel);
+          
+          const addressElement = document.createElement("div");
+          addressElement.style.marginTop = "4px";
+          addressElement.textContent = "Finding bus location...";
+          
+          popup.appendChild(addressElement);
+          
+          // GPS and bus information
           [
             `Mode: API record; live status unconfirmed`,
             `Latitude: ${latitude}`,
@@ -266,8 +308,25 @@ mapElement.parentElement.insertBefore(busSelector, mapElement);
             popup.appendChild(document.createElement("br"));
             popup.appendChild(document.createTextNode(line));
           });
-
+          
+          // OpenStreetMap attribution
+          const attribution = document.createElement("div");
+          attribution.style.marginTop = "8px";
+          attribution.style.fontSize = "11px";
+          
+          const attributionLink = document.createElement("a");
+          attributionLink.href = "https://www.openstreetmap.org/copyright";
+          attributionLink.target = "_blank";
+          attributionLink.rel = "noopener noreferrer";
+          attributionLink.textContent = "© OpenStreetMap contributors";
+          
+          attribution.appendChild(attributionLink);
+          popup.appendChild(attribution);
+          
           marker.bindPopup(popup);
+          
+          // Fetch readable geographical address.
+          loadBusAddress(latitude, longitude, addressElement);
           apiBusMarkers.push(marker);
 
           const option = document.createElement("option");

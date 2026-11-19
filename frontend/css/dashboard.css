@@ -573,3 +573,33 @@
 
   --stop: #FF755E;
 }
+.location-address {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 16px;
+  background: var(--surface, #080808);
+  border: 1px solid var(--border, #292929);
+  border-radius: 12px;
+}
+
+.location-address > span {
+  color: var(--muted, #a0a0a0);
+  font-size: 0.85rem;
+}
+
+.location-address strong {
+  font-size: 1rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.location-address small {
+  color: var(--muted, #a0a0a0);
+  font-size: 0.75rem;
+}
+
+.location-address a {
+  color: inherit;
+}
