@@ -1,369 +1,109 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <meta name="theme-color" content="#080d18">
-  <meta name="description"
-    content="TrackBus helps college students track their campus bus, check its location and plan their journey with confidence.">
-
-  <title>TrackBus — Your Campus Bus, Within Reach</title>
-
-  
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TrackBus: see where your college bus is, right now</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
   <script src="js/main.js" defer></script>
+  <script src="js/theme.js" defer></script>
 </head>
-  
 <body>
-
-  <!-- Navigation -->
-  <header class="navbar" id="navbar">
-    <a class="brand" href="#home" aria-label="TrackBus home">
-      <span class="brand-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M5 17.5V7.8C5 5.7 6.8 4 9 4h6c2.2 0 4 1.7 4 3.8v9.7"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <path d="M4 17.5h16l-1.5 3H5.5L4 17.5Z"
-            fill="currentColor"/>
-          <path d="M7 9h10v5H7z" fill="currentColor" opacity=".35"/>
-          <circle cx="8" cy="16.5" r="1" fill="currentColor"/>
-          <circle cx="16" cy="16.5" r="1" fill="currentColor"/>
-          <path d="M12 1.8v2.1" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round"/>
-        </svg>
-      </span>
-      <span class="brand-name">Track<span>Bus</span></span>
-    </a>
-
-    <nav class="nav-links" id="navLinks" aria-label="Main navigation">
-      <a class="nav-link active" href="#home">Home</a>
-      <a class="nav-link" href="#features">Features</a>
-      <a class="nav-link" href="#how-it-works">How It Works</a>
-      <a class="nav-link" href="#about">About</a>
-    </nav>
-
-    <div class="nav-actions">
-      <a class="button button-outline nav-login" href="login.html">
-        Student Login
-      </a>
-      <a class="button button-primary nav-register" href="register.html">
-        Register
-      </a>
-      <a class="button button-outline admin-link" href="admin-login.html">
-        Admin Login
-      </a>
-    </div>
-
-    <button class="menu-toggle" id="menuToggle"
-      type="button" aria-label="Open navigation"
-      aria-expanded="false" aria-controls="navLinks">
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
+<div class="wrap">
+  <header id="navbar">
+    <a class="logo" href="#top"><i></i>TrackBus</a>
+    <nav id="navLinks" aria-label="Main navigation"><a href="#how">How it works</a><a href="#features">Features</a><a href="login.html" class="nav-link">Student Login</a>
+<a href="admin-login.html" class="nav-link">Admin Login</a><button id="themeToggle" class="theme-toggle" type="button">
+  ☀ Light
+</button><a class="btn" href="register.html">Get started</a></nav>
   </header>
 
-  <main>
-
-    <!-- Hero -->
-    <section class="hero" id="home">
-
-      <video class="hero-video" id="heroVideo"
-        autoplay muted loop playsinline
-        preload="metadata"
-        poster="assets/trackbus-poster.jpg"
-        aria-hidden="true">
-        <source src="assets/trackbus-hero.mp4.mp4" type="video/mp4">
-      </video>
-
-      <div class="hero-overlay"></div>
-      <div class="hero-vignette"></div>
-
-      <div class="hero-content">
-        <div class="eyebrow">
-          <span class="eyebrow-line"></span>
-          SMART CAMPUS MOBILITY
+  <main id="top">
+    <div class="hero">
+      <div>
+        <h1>Know where your college bus is before you leave home.</h1>
+        <p>TrackBus shows your bus on a live map and tells you when it will reach your stop. No more standing outside for twenty minutes, or running after it.</p>
+        <div class="cta">
+          <a class="btn" href="#get">Track my bus</a>
+          <a class="btn alt" href="#how">See how it works</a>
         </div>
-
-        <h1>See Your Bus.<br><span> Skip the Wait.</span></h1>
-
-        <p class="hero-description">
-          Track your bus in real time. Know where it is
-          and plan your journey with confidence.
-        </p>
-
-        <div class="hero-buttons">
-          <a class="button button-primary button-large"
-            href="login.html">
-            Track Your Bus
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M5 12h14m-6-6 6 6-6 6"
-                stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </a>
-
         
-        </div>
-
-        <div class="hero-note">
-          <span class="note-dot"></span>
-          Smarter journeys start here
-        </div>
       </div>
 
-      <!-- Floating tracking indicator: illustrative, not live data -->
-      <div class="floating-status" aria-hidden="true">
-        <div class="status-icon">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M5 17V7.5A2.5 2.5 0 0 1 7.5 5h9A2.5 2.5 0 0 1 19 7.5V17"
-              stroke="currentColor" stroke-width="1.8"/>
-            <path d="M4 17h16l-2 3H6l-2-3Z"
-              fill="currentColor"/>
-            <path d="M8 9h8v4H8z" fill="currentColor" opacity=".4"/>
-            <circle cx="8" cy="16" r="1" fill="currentColor"/>
-            <circle cx="16" cy="16" r="1" fill="currentColor"/>
-          </svg>
-        </div>
-        <div>
-          <span class="status-title">TrackBus</span>
-          <span class="status-subtitle">Campus mobility</span>
-        </div>
-        <span class="status-indicator"></span>
-      </div>
-
-      <!-- Feature strip -->
-      <div class="hero-features" id="features">
-
-        <article class="feature-item">
-          <div class="feature-icon">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"
-                stroke="currentColor" stroke-width="1.8"/>
-              <circle cx="12" cy="10" r="2.5"
-                stroke="currentColor" stroke-width="1.8"/>
-            </svg>
-          </div>
-          <h3>Live Tracking</h3>
-          <p>Real-time GPS location<br>of your bus</p>
-        </article>
-
-        <article class="feature-item">
-          <div class="feature-icon">
-            <svg viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9"
-                stroke="currentColor" stroke-width="1.8"/>
-              <path d="M12 7v5l3.5 2"
-                stroke="currentColor" stroke-width="1.8"
-                stroke-linecap="round"/>
-            </svg>
-          </div>
-          <h3>Accurate ETA</h3>
-          <p>Know your arrival time<br>before you wait</p>
-        </article>
-
-        <article class="feature-item">
-          <div class="feature-icon">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"
-                stroke="currentColor" stroke-width="1.8"
-                stroke-linejoin="round"/>
-              <path d="m9 12 2 2 4-4"
-                stroke="currentColor" stroke-width="1.8"
-                stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <h3>Safe &amp; Reliable</h3>
-          <p>A more secure and<br>reliable journey</p>
-        </article>
-
-      </div>
-
-      <a class="scroll-cue" href="#how-it-works" aria-label="Scroll to how it works">
-        <span>SCROLL TO EXPLORE</span>
-        <span class="scroll-line"></span>
-      </a>
-
-    </section>
-
-    <!-- Intro section -->
-    <section class="intro-section" id="about">
-      <div class="section-glow"></div>
-           
-
-      <div class="section-heading reveal">
-        <span class="section-label">BUILT FOR YOUR CAMPUS</span>
-        <h2>Less waiting.<br><span>More living.</span></h2>
-        <p>
-          A smarter way to stay connected to your college bus.
-          Know where your journey begins, without the uncertainty.
-        </p>
-      </div>
-
-      <div class="intro-grid reveal">
-        <article class="info-card">
-          <span class="card-number">01</span>
-          <div class="small-card-icon">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"
-                stroke="currentColor" stroke-width="1.8"/>
-              <circle cx="12" cy="10" r="2.5"
-                stroke="currentColor" stroke-width="1.8"/>
-            </svg>
-          </div>
-          <h3>Know its location</h3>
-          <p>Check your campus bus location through the tracking experience.</p>
-        </article>
-
-        <article class="info-card">
-          <span class="card-number">02</span>
-          <div class="small-card-icon">
-            <svg viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9"
-                stroke="currentColor" stroke-width="1.8"/>
-              <path d="M12 7v5l3.5 2"
-                stroke="currentColor" stroke-width="1.8"
-                stroke-linecap="round"/>
-            </svg>
-          </div>
-          <h3>Plan your journey</h3>
-          <p>Use available arrival estimates to plan when to reach your stop.</p>
-        </article>
-
-        <article class="info-card">
-          <span class="card-number">03</span>
-          <div class="small-card-icon">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"
-                stroke="currentColor" stroke-width="1.8"/>
-              <path d="m9 12 2 2 4-4"
-                stroke="currentColor" stroke-width="1.8"
-                stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <h3>Travel with confidence</h3>
-          <p>Keep useful bus information accessible when you need it.</p>
-        </article>
-      </div>
-    </section>
-
-    <!-- How it works -->
-    <section class="how-section" id="how-it-works">
-      <div class="how-content reveal">
-        <span class="section-label">SIMPLE BY DESIGN</span>
-        <h2>Your next journey,<br><span>made simpler.</span></h2>
-        <p class="how-description">
-          Get started with TrackBus in a few simple steps.
-        </p>
-
-        <div class="steps">
-          <div class="step">
-            <span class="step-number">01</span>
-            <div>
-              <h3>Sign in</h3>
-              <p>Access your student account.</p>
-            </div>
-          </div>
-          <div class="step">
-            <span class="step-number">02</span>
-            <div>
-              <h3>Open bus tracking</h3>
-              <p>View available bus location information.</p>
-            </div>
-          </div>
-          <div class="step">
-            <span class="step-number">03</span>
-            <div>
-              <h3>Plan your arrival</h3>
-              <p>Check available ETA information for your journey.</p>
-            </div>
-          </div>
-        </div>
-
-        <a class="button button-primary button-large" href="login.html">
-          Get Started
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M5 12h14m-6-6 6 6-6 6"
-              stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </a>
-      </div>
-
-      <div class="route-visual reveal" aria-hidden="true">
-        <div class="route-orbit orbit-one"></div>
-        <div class="route-orbit orbit-two"></div>
-        <div class="route-line">
-          <span class="route-stop stop-one"></span>
-          <span class="route-stop stop-two"></span>
-          <span class="route-stop stop-three"></span>
-        </div>
-        <div class="route-pin">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"
-              stroke="currentColor" stroke-width="1.8"/>
-            <circle cx="12" cy="10" r="2.5"
-              stroke="currentColor" stroke-width="1.8"/>
-          </svg>
-        </div>
-        <div class="route-caption">
-          <span class="caption-dot"></span>
-          A smarter campus journey
-        </div>
-      </div>
-    </section>
-
-    <!-- Final call to action -->
-    <section class="cta-section reveal">
-      <div class="cta-glow"></div>
-      <span class="section-label">YOUR JOURNEY STARTS HERE</span>
-      <h2>Your campus bus,<br><span>within reach.</span></h2>
-      <p>Make every campus journey a little more predictable.</p>
-      <a class="button button-primary button-large" href="login.html">
-        Track Your Bus
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M5 12h14m-6-6 6 6-6 6"
-            stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round"/>
+      <div class="live" aria-label="Example of a live bus tracking screen">
+        <div class="live-top"><div><b>Bus 01</div><span class="pill">Live</span></div>
+        <svg viewBox="0 0 360 230" role="img" aria-label="Map showing a bus moving along its route toward your stop">
+          <path id="route" d="M24 196 C90 196 96 120 160 120 S250 150 276 86 S330 40 340 36" fill="none" stroke="var(--line)" stroke-width="8" stroke-linecap="round"/>
+          <path id="done" d="M24 196 C90 196 96 120 160 120 S250 150 276 86 S330 40 340 36" fill="none" stroke="var(--brand)" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 2000"/>
+          <circle cx="24" cy="196" r="9" fill="var(--surface)" stroke="var(--brand)" stroke-width="4"/>
+          <circle cx="160" cy="120" r="9" fill="var(--surface)" stroke="var(--brand)" stroke-width="4"/>
+          <g transform="translate(276 86)"><circle r="16" fill="var(--stop)" opacity=".18"/><circle r="9" fill="var(--stop)"/></g>
+          <text x="276" y="122" text-anchor="middle" font-size="13" font-weight="500" fill="var(--ink)" font-family="Hanken Grotesk,sans-serif">Your stop</text>
+          <g id="bus"><rect x="-17" y="-12" width="34" height="24" rx="7" fill="var(--amber)"/><rect x="-12" y="-7" width="24" height="7" rx="2" fill="#2A1D00" opacity=".85"/><circle cx="-9" cy="12" r="3.5" fill="#2A1D00"/><circle cx="9" cy="12" r="3.5" fill="#2A1D00"/></g>
         </svg>
-      </a>
-    </section>
-
-  </main>
-
-  <!-- Footer -->
-  <footer class="footer">
-    <a class="brand footer-brand" href="#home">
-      <span class="brand-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M5 17.5V7.8C5 5.7 6.8 4 9 4h6c2.2 0 4 1.7 4 3.8v9.7"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <path d="M4 17.5h16l-1.5 3H5.5L4 17.5Z" fill="currentColor"/>
-          <path d="M7 9h10v5H7z" fill="currentColor" opacity=".35"/>
-        </svg>
-      </span>
-      <span class="brand-name">Track<span>Bus</span></span>
-    </a>
-
-    <p>Smart tracking for a better campus.</p>
-
-    <div class="footer-links">
-      <a href="#home">Home</a>
-      <a href="#features">Features</a>
-      <a href="login.html">Student Login</a>
-      <a href="admin-login.html">Admin Login</a>
+        <div class="eta"><strong id="eta">6 min</strong><span>until the bus reaches Your stop</span></div>
+      </div>
     </div>
 
-    <p class="copyright">
-      © <span id="currentYear"></span> TrackBus. College mobility project.
-    </p>
-  </footer>
+    <section id="how">
+      <h2>How it works</h2>
+      <ol class="steps">
+        <li><h3>Pick your route</h3><p>Choose your college and your bus number once. TrackBus remembers it.</p></li>
+        <li><h3>Set your stop</h3><p>Select where you board. We calculate the arrival time for that exact stop.</p></li>
+        <li><h3>Watch it arrive</h3><p>The bus moves on the map in real time. Get a nudge when it’s 10 minutes away.</p></li>
+      </ol>
+    </section>
 
+    <section id="features">
+      <h2>What you get</h2>
+      <div class="feats">
+        <div class="feat"><h3>Live location</h3><p>See exactly where the bus is, updated every few seconds.</p></div>
+        <div class="feat"><h3>Arrival time for your stop</h3><p>Not a guess for the whole route. The time for the stop you use.</p></div>
+        <div class="feat"><h3>Arrival alerts</h3><p>A notification when your bus is close, so you can stay home a bit longer.</p></div>
+        <div class="feat"><h3>Delay and route notices</h3><p>Traffic, breakdown or a changed route? The transport office can tell every rider at once.</p></div>
+        <div class="feat"><h3>All your buses in one place</h3><p>Morning bus, evening bus, exam-day special. Switch between them in a tap.</p></div>
+        <div class="feat"><h3>Light on data</h3><p>Opens fast on a basic phone and a slow connection.</p></div>
+      </div>
+    </section>
+
+    <section id="get" style="border-top:0;padding-top:24px">
+      <div class="band">
+        <div>
+          <h2>Bring TrackBus to your college</h2>
+          <p>Students can start tracking today. Transport teams can add their buses in minutes.</p>
+        </div>
+        <a class="btn" href="register.html">Get started</a>
+      </div>
+    </section>
+  </main>
+
+  <footer><span>© <span id="currentYear">2026</span> TrackBus</span><span>Made for students who just want to catch the bus.</span></footer>
+</div>
+
+<script>
+(function(){
+  var route=document.getElementById('route'),done=document.getElementById('done'),bus=document.getElementById('bus'),eta=document.getElementById('eta');
+  var len=route.getTotalLength(), stopAt=0.72, cycle=16000;
+  function place(p){
+    var pt=route.getPointAtLength(len*p*stopAt/0.72*0.72);
+    bus.setAttribute('transform','translate('+pt.x+' '+pt.y+')');
+    done.setAttribute('stroke-dasharray',(len*p*0.72)+' 2000');
+    var mins=Math.max(1,Math.round(8*(1-p)));
+    eta.textContent=mins+' min';
+  }
+  var still=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(still){place(0.45);return;}
+  var t0=null;
+  function tick(ts){
+    if(t0===null)t0=ts;
+    place(((ts-t0)%cycle)/cycle);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
 </body>
 </html>

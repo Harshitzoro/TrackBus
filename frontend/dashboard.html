@@ -1,16 +1,16 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#080d18">
+ <meta name="theme-color" content="#EEF3F1">
   <meta name="description" content="Track your campus bus with TrackBus.">
   <title>Student Dashboard — TrackBus</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/auth.css">
@@ -20,11 +20,6 @@
   href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
 />
 
-
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
 
   <script type="module" src="js/dashboard.js"></script>
 
@@ -102,31 +97,42 @@
           <strong id="busSpeed">—</strong>
         </div>
       </div>
+      <div class="location-address">
+        <span>Readable bus location</span>
+        <strong id="busAddress">Waiting for bus coordinates...</strong>
+        <small>
+          Address data ©
+          <a href="https://www.openstreetmap.org/copyright"
+             target="_blank"
+             rel="noopener noreferrer">
+            OpenStreetMap contributors
+          </a>
+        </small>
+      </div>
     </section>
 
-    <section class="map-panel" aria-labelledby="mapHeading">
-      <div class="panel-heading">
-        <div>
-          <span class="section-label">LOCATION</span>
-          <h2 id="mapHeading">Bus location</h2>
-        </div>
-      </div>
-
-
+   <section class="map-panel" aria-labelledby="mapHeading">
+  <div class="panel-heading">
+    <div>
+      <span class="section-label">LOCATION</span>
+      <h2 id="mapHeading">Bus location</h2>
+    </div>
+  </div>
 
   <div id="map"></div>
+
+  <div class="map-container">
+    <a
+      id="mapLink"
+      href="#"
+      target="_blank"
+      rel="noopener noreferrer"
+      hidden
+    >
+      Open location in Google Maps
+    </a>
+  </div>
 </section>
-
-      
-<div class="map-container">
-
-  <a id="mapLink" href="#" target="_blank"
-     rel="noopener noreferrer" hidden>
-    Open location in Google Maps
-  </a>
-</div>
-
-    </section>
 
     <p class="dashboard-note">
       Location information depends on the latest data received by the server.

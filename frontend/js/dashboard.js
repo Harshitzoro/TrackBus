@@ -2,7 +2,7 @@
 import { auth } from "./firebase.js";
 import { onAuthStateChanged, signOut } from
   "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-import { getBuses } from "./api.js";
+import { getBuses, getReverseGeocoding } from "./api.js";
 import { initializeMap } from "./map.js";
 
 
@@ -23,45 +23,91 @@ let requestInProgress = false;
 
 
 function setMessage(text) {
-  message.textContent = text;
+  if (message) {
+    message.textContent = text;
+  } else {
+    console.error(
+      'Dashboard element "#dashboardMessage" was not found.'
+    );
+  }
 }
 
-function formatTimestamp(value) {
-  if (!value) return "Not reported";
+function formatTimestamp(timestamp) {
+  if (!timestamp) {
+    return "Not reported";
+  }
 
-  const date = new Date(value);
+  const date = new Date(timestamp);
 
   if (Number.isNaN(date.getTime())) {
-    return String(value);
+    return "Invalid timestamp";
   }
 
   return date.toLocaleString();
 }
 
+async function updateBusAddress(latitude, longitude) {
+  const addressElement = $("busAddress");
 
-function showNoLocation() {
-  $("latitude").textContent = "—";
-  $("longitude").textContent = "—";
-  $("lastUpdated").textContent = "Not reported";
-  $("busSpeed").textContent = "—";
-  $("mapMessage").textContent =
-    "Waiting for valid bus coordinates from the API.";
-  $("mapLink").hidden = true;
-
-  if (busMarker && busMap) {
-    busMap.removeLayer(busMarker);
-    busMarker = null;
+  if (!addressElement) {
+    console.warn('Dashboard element "#busAddress" was not found.');
+    return;
   }
 
-  if (busAccuracyCircle && busMap) {
-    busMap.removeLayer(busAccuracyCircle);
-    busAccuracyCircle = null;
+  const coordinateKey = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+
+  if (addressElement.dataset.coordinateKey === coordinateKey) {
+    return;
   }
 
-  if (busMap) {
-    busMap.setView([22.9734, 78.6569], 5);
+  addressElement.dataset.coordinateKey = coordinateKey;
+  addressElement.textContent = "Finding bus location...";
+
+  try {
+    const result = await getReverseGeocoding(latitude, longitude);
+
+    // Prevent an older lookup from replacing a newer bus location.
+    if (addressElement.dataset.coordinateKey !== coordinateKey) {
+      return;
+    }
+
+    addressElement.textContent = result.address;
+  } catch (error) {
+    console.error("Address lookup failed:", error);
+
+    if (addressElement.dataset.coordinateKey === coordinateKey) {
+      addressElement.textContent = "Address temporarily unavailable";
+    }
   }
 }
+
+function showNoLocation() {
+  const latitude = $("latitude");
+  const longitude = $("longitude");
+  const lastUpdated = $("lastUpdated");
+  const busSpeed = $("busSpeed");
+  const mapMessage = $("mapMessage");
+  const mapLink = $("mapLink");
+
+  if (latitude) latitude.textContent = "—";
+  if (longitude) longitude.textContent = "—";
+  if (lastUpdated) lastUpdated.textContent = "Not reported";
+  if (busSpeed) busSpeed.textContent = "—";
+
+  if (mapMessage) {
+    mapMessage.textContent =
+      "Waiting for valid bus coordinates from the API.";
+  }
+
+  if (mapLink) mapLink.hidden = true;
+  const busAddress = $("busAddress");
+
+  if (busAddress) {
+    busAddress.textContent = "Location not available";
+    delete busAddress.dataset.coordinateKey;
+  }
+}
+
 
 
 function showLocation(location) {
@@ -87,13 +133,17 @@ function showLocation(location) {
 
   $("latitude").textContent = lat.toFixed(6);
   $("longitude").textContent = lng.toFixed(6);
+  updateBusAddress(lat, lng);
   $("lastUpdated").textContent = formatTimestamp(location.timestamp);
   $("busSpeed").textContent =
     location.speed_kmph == null
       ? "Not reported"
       : `${location.speed_kmph} km/h`;
 
-  $("mapMessage").textContent = "Latest reported coordinates available";
+  const mapMessage = $("mapMessage");
+if (mapMessage) {
+  mapMessage.textContent = "Latest reported coordinates available";
+}
 
   const mapLink = $("mapLink");
   mapLink.href =
